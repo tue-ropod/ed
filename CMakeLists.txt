@@ -61,7 +61,7 @@ generate_messages(
 ###################################
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ed_core ed_io ed_visualization
+  LIBRARIES ed_core ed_io
   CATKIN_DEPENDS tue_config tue_serialization rgbd ed_object_models
   # DEPENDS system_lib
 )
@@ -134,13 +134,6 @@ add_library(ed_io
 target_link_libraries(ed_io ed_core)
 add_dependencies(ed_io ${PROJECT_NAME}_gencpp)
 
-add_library(ed_visualization
-  include/ed/helpers/image_publisher.h
-  src/helpers/image_publisher.cpp
-)
-target_link_libraries(ed_visualization ${catkin_LIBRARIES})
-add_dependencies(ed_visualization ${PROJECT_NAME}_gencpp)
-
 # ------------------------------------------------------------------------------------------------
 #                                               SERVER
 # ------------------------------------------------------------------------------------------------
@@ -151,7 +144,7 @@ add_executable(ed
   src/server.cpp
   src/plugin_container.cpp
 )
-target_link_libraries(ed ed_core ed_io ed_visualization)
+target_link_libraries(ed ed_core ed_io)
 add_dependencies(ed ${PROJECT_NAME}_gencpp)
 
 # ------------------------------------------------------------------------------------------------
