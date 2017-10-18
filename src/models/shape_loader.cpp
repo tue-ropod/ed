@@ -15,6 +15,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+//#include <ros/ros.h>
+
 namespace ed
 {
 namespace models
@@ -260,8 +262,8 @@ void createPolygon(geo::Shape& shape, const std::vector<geo::Vec2>& points, doub
     TPPLPoly poly;
     poly.Init(points.size());
 
-    double min_z = -height / 2;
-    double max_z =  height / 2;
+    double min_z = 0.0;
+    double max_z =  height;
 
     geo::Mesh mesh;
 
@@ -499,6 +501,104 @@ geo::ShapePtr loadShape(const std::string& model_path, tue::config::Reader cfg,
 
         cfg.endGroup();
     }
+   /* else if (cfg.readGroup("lines"))
+    {
+        std::vector<geo::Vec2> points;
+        if (cfg.readArray("points", tue::config::REQUIRED))
+        {
+            double depth;
+            cfg.value("depth", depth);
+    
+	    double last_x, last_y;
+	    bool initialKnown = false;
+	    
+            while(cfg.nextArrayItem())
+            {
+                
+		if(!initialKnown)
+		{
+		  points.push_back(geo::Vec2());
+		  geo::Vec2& p = points.back();
+		  
+		  cfg.value("x", p.x);
+                  cfg.value("y", p.y);
+		
+		  last_x = p.x;
+		  last_y = p.y;
+		  initialKnown = true;
+		}
+		else
+		{  
+		  double new_x, new_y;
+		  cfg.value("x", new_x);
+                  cfg.value("y", new_y);
+
+		  double vector_x = new_x - last_x;
+		  double vector_y = new_y - last_y;
+		  
+		  double length = sqrt(vector_x*vector_x+vector_y*vector_y);
+
+		  double x_offset = last_x + vector_y*depth/length;
+		  double y_offset = last_y - vector_x*depth/length;
+		 
+		  points.push_back(geo::Vec2());
+                  geo::Vec2& p = points.back();
+		  p.x = x_offset;
+		  p.y = y_offset;
+
+		 // std::cout <<"x_offset " << x_offset << "y_offset" << y_offset << std::endl;
+
+		  x_offset = last_x - vector_y*depth/length;
+		  y_offset = last_y + vector_x*depth/length;
+		  
+		  points.push_back(geo::Vec2());
+                  p = points.back();
+		  p.x = x_offset;
+		  p.y = y_offset;
+		  
+		  //char x_off_char[32];
+		 // x_off_char = std::to_string(x_offset);
+		  
+		  //ROS_INFO_STREAM("x_offset " << x_off_char << "y_offset");
+		  ROS_DEBUG("x_offset " << std::to_string(x_offset) << "y_offset");
+		  
+		  x_offset = new_x - vector_y*depth/length;
+		  y_offset = new_y + vector_x*depth/length;
+		  
+		  points.push_back(geo::Vec2());
+                  p = points.back();
+		  p.x = x_offset;
+		  p.y = y_offset;
+		  
+		 // ROS_INFO_STREAM("x_offset " << x_offset << "y_offset" << y_offset);
+
+		  x_offset = last_x + vector_y*depth/length;
+		  y_offset = last_y - vector_x*depth/length;
+		  
+		  points.push_back(geo::Vec2());
+                  p = points.back();
+		  p.x = x_offset;
+		  p.y = y_offset;
+		  
+		 // ROS_INFO_STREAM("x_offset " << x_offset << "y_offset" << y_offset);
+		  
+		  last_x = new_x;
+		  last_y = new_y;
+		}
+            }
+            cfg.endArray();
+        }
+
+        double height;
+        if (cfg.value("height", height))
+        {
+            shape.reset(new geo::Shape);
+            createPolygon(*shape, points, height, true);
+        }
+
+        cfg.endGroup();
+    }
+    */
     else if (cfg.readGroup("polygon"))
     {
         std::vector<geo::Vec2> points;
