@@ -213,7 +213,7 @@ public:
     void printFlags() const {
       int counter = 1;
       
-      std::cout << "Flags will be printed now for entity " << id.str() << std::endl;
+      std::cout << "Flags will be printed now for entity " << id_ << std::endl;
       
       for(std::set<std::string>::iterator it = flags_.begin(); it != flags_.end(); ++it ) {
 	  std::cout << "Flag" << counter << " = " << *it << std::endl;
