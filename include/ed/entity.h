@@ -209,6 +209,18 @@ public:
     bool hasFlag(const std::string& flag) const { return flags_.find(flag) != flags_.end(); }
 
     const std::set<std::string>& flags() const { return flags_; }
+    
+    void printFlags() const {
+      int counter = 1;
+      
+      std::cout << "Flags will be printed now for entity " << id.str() << std::endl;
+      
+      for(std::set<std::string>::iterator it = flags_.begin(); it != flags_.end(); ++it ) {
+	  std::cout << "Flag" << counter << " = " << *it << std::endl;
+	  counter++;
+      }
+      
+    }
 
 private:
 
