@@ -8,6 +8,59 @@ namespace ed
 namespace convex_hull
 {
 
+  void fitCircle(const std::vector<geo::Vec2f>& points, ed::convex_hull::Circle& cirlce, z_min, float z_max, geo::Pose3D& pose)
+  {
+    
+    // according to https://dtcenter.org/met/users/docs/write_ups/circle_fit.pdf
+    float x_avg = 0.0, y_avg = 0.0;
+    for(unsigned int i = 0; i < points.size(); ++i)
+    {
+      x_avg += points[i].x;
+      y_avg += points[i].y;
+    }
+    
+    x_avg /= points.size();
+    y_avg /= points.size();
+    
+    std::vector<float> ui(points.size()), vi(points.size());
+    float Suu = 0.0, Suv = 0.0, Suuu = 0.0, Suvv = 0.0, Suv = 0.0, Svv = 0.0, Svvv = 0.0, Svuu = 0.0;
+    for(unsigned int i = 0; i < points.size(); ++i)
+    {
+      ui[i] = points[i].x -x_avg;
+      vi[i] = points[i].y -y_avg;
+      
+      Suu += ui[i]*ui[i];
+      Suv += ui[i]*vi[i];
+      Suuu += ui[i]*ui[i]*ui[i];
+      Suvv += ui[i]*vi[i]*vi[i];
+      
+      Suv += ui[i]*vi[i];
+      Svv += vi[i]*vi[i];
+      Svvv += vi[i]*vi[i]*vi[i];
+      Svuu += vi[i]*ui[i]*ui[i];
+    }
+
+    float a = Suu;
+    float b = Suv;
+    float c = 0.5*(Suuu+Suvv);
+    float d = Suv;
+    float e = Svv;
+    float f = 0.5*(Svvv+Svuu);
+    
+    float vc = (f - c*d/a)/(e-b*d/a);
+    float uc = (c-vc*b)/a;
+
+    float xc = uc+x_avg;
+    float yc = vc+y_avg;
+
+    float alpha = uc*uc+vc*vc+(Suu+Svv)/points.size();
+    float R = std::sqrt(alpha);
+    
+    cirlce.setValues(xc, yc, R);    
+  }
+  
+  
+  
 // ----------------------------------------------------------------------------------------------------
 
 void create(const std::vector<geo::Vec2f>& points, float z_min, float z_max, ConvexHull& chull, geo::Pose3D& pose)
