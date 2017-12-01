@@ -5,10 +5,9 @@
 namespace ed
 {
 
-namespace convex_hull
-{
+namespace tracking{
 
-  void fitCircle(const std::vector<geo::Vec2f>& points, ed::convex_hull::Circle& cirlce, z_min, float z_max, geo::Pose3D& pose)
+  void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle& cirlce, float z_min, float z_max, geo::Pose3D& pose)
   {
     
     // according to https://dtcenter.org/met/users/docs/write_ups/circle_fit.pdf
@@ -23,7 +22,7 @@ namespace convex_hull
     y_avg /= points.size();
     
     std::vector<float> ui(points.size()), vi(points.size());
-    float Suu = 0.0, Suv = 0.0, Suuu = 0.0, Suvv = 0.0, Suv = 0.0, Svv = 0.0, Svvv = 0.0, Svuu = 0.0;
+    float Suu = 0.0, Suv = 0.0, Suuu = 0.0, Suvv = 0.0, Svv = 0.0, Svvv = 0.0, Svuu = 0.0;
     for(unsigned int i = 0; i < points.size(); ++i)
     {
       ui[i] = points[i].x -x_avg;
@@ -34,7 +33,6 @@ namespace convex_hull
       Suuu += ui[i]*ui[i]*ui[i];
       Suvv += ui[i]*vi[i]*vi[i];
       
-      Suv += ui[i]*vi[i];
       Svv += vi[i]*vi[i];
       Svvv += vi[i]*vi[i]*vi[i];
       Svuu += vi[i]*ui[i]*ui[i];
@@ -59,8 +57,39 @@ namespace convex_hull
     cirlce.setValues(xc, yc, R);    
   }
   
+  void Circle::setValues(float a, float b, float c){
+  x_ = a;
+  y_ = b;
+  R_ = c;
+}
+
+void Circle::setMarker ( visualization_msgs::Marker& marker ){
+  marker.header.frame_id = "base_link";
+  marker.header.stamp = ros::Time();
+  marker.ns = "my_namespace";
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::SPHERE;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = 1;
+  marker.pose.position.y = 1;
+  marker.pose.position.z = 1;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = 1;
+  marker.scale.y = 0.1;
+  marker.scale.z = 0.1;
+  marker.color.a = 1.0;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+  marker.color.b = 0.0;
+}
   
-  
+}
+
+namespace convex_hull
+{
 // ----------------------------------------------------------------------------------------------------
 
 void create(const std::vector<geo::Vec2f>& points, float z_min, float z_max, ConvexHull& chull, geo::Pose3D& pose)
