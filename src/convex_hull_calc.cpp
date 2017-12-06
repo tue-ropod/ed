@@ -14,6 +14,7 @@ namespace tracking{
     float x_avg = 0.0, y_avg = 0.0;
     for(unsigned int i = 0; i < points.size(); ++i)
     {
+      std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
       x_avg += points[i].x;
       y_avg += points[i].y;
     }
@@ -53,10 +54,8 @@ namespace tracking{
 
     float alpha = uc*uc+vc*vc+(Suu+Svv)/points.size();
     float R = std::sqrt(alpha);
-    
-    std::cout << "Fitting: x_, y_, R_" << xc << ", " <<  yc << ", " << R << std::endl;
-    
-    cirlce->setValues(xc, yc, R);    
+std::cout << "fitter: x_, y_, R_" << xc << ", " << yc << ", " << R << std::endl;
+    cirlce->setValues( xc, yc,  R);    
   }
   
   void Circle::setValues(float a, float b, float c){
@@ -66,29 +65,31 @@ namespace tracking{
 }
 
 void Circle::setMarker ( visualization_msgs::Marker& marker ){
-  marker.header.frame_id = "/pico/laser/scan";
+  marker.header.frame_id = "/map";
   marker.header.stamp = ros::Time();
   marker.ns = "my_namespace";
   marker.id = 0;
-  marker.type = visualization_msgs::Marker::SPHERE;
+  marker.type = visualization_msgs::Marker::CYLINDER;
   marker.action = visualization_msgs::Marker::ADD;
   marker.pose.position.x = x_;
   marker.pose.position.y = y_;
   marker.pose.position.z = 1;
   
-  std::cout << "MArker: x_, y_, R_" << x_ << ", " << y_ << ", " << R_ << std::endl;
+  //std::cout << "MArker: x_, y_, R_" << x_ << ", " << y_ << ", " << R_ << std::endl;
   
   marker.pose.orientation.x = 0.0;
   marker.pose.orientation.y = 0.0;
   marker.pose.orientation.z = 0.0;
   marker.pose.orientation.w = 1.0;
-  marker.scale.x = R_;
-  marker.scale.y = R_;
+  marker.scale.x = 2*R_;
+  marker.scale.y = 2*R_;
   marker.scale.z = 1.0;
   marker.color.a = 1.0;
   marker.color.r = 0.0;
   marker.color.g = 1.0;
   marker.color.b = 0.0;
+  
+  marker.lifetime = ros::Duration(1.0);
 }
   
 }
