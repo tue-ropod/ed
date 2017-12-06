@@ -12,9 +12,7 @@ namespace tracking
   class Circle {
   float x_, y_, R_;
   
-public:
-  Circle();
-  
+public:  
   void setValues(float a, float b, float c);
   
   void setMarker(visualization_msgs::Marker& marker);
@@ -25,8 +23,9 @@ public:
 
 
 
-void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle& cirlce, float z_min, float z_max, geo::Pose3D& pose); 
+void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, float z_min, float z_max, geo::Pose3D& pose); 
 }
+
 
 namespace convex_hull
 {

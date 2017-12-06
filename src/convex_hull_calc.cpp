@@ -7,7 +7,7 @@ namespace ed
 
 namespace tracking{
 
-  void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle& cirlce, float z_min, float z_max, geo::Pose3D& pose)
+  void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, float z_min, float z_max, geo::Pose3D& pose)
   {
     
     // according to https://dtcenter.org/met/users/docs/write_ups/circle_fit.pdf
@@ -54,7 +54,9 @@ namespace tracking{
     float alpha = uc*uc+vc*vc+(Suu+Svv)/points.size();
     float R = std::sqrt(alpha);
     
-    cirlce.setValues(xc, yc, R);    
+    std::cout << "Fitting: x_, y_, R_" << xc << ", " <<  yc << ", " << R << std::endl;
+    
+    cirlce->setValues(xc, yc, R);    
   }
   
   void Circle::setValues(float a, float b, float c){
@@ -64,22 +66,25 @@ namespace tracking{
 }
 
 void Circle::setMarker ( visualization_msgs::Marker& marker ){
-  marker.header.frame_id = "base_link";
+  marker.header.frame_id = "/pico/laser/scan";
   marker.header.stamp = ros::Time();
   marker.ns = "my_namespace";
   marker.id = 0;
   marker.type = visualization_msgs::Marker::SPHERE;
   marker.action = visualization_msgs::Marker::ADD;
-  marker.pose.position.x = 1;
-  marker.pose.position.y = 1;
+  marker.pose.position.x = x_;
+  marker.pose.position.y = y_;
   marker.pose.position.z = 1;
+  
+  std::cout << "MArker: x_, y_, R_" << x_ << ", " << y_ << ", " << R_ << std::endl;
+  
   marker.pose.orientation.x = 0.0;
   marker.pose.orientation.y = 0.0;
   marker.pose.orientation.z = 0.0;
   marker.pose.orientation.w = 1.0;
-  marker.scale.x = 1;
-  marker.scale.y = 0.1;
-  marker.scale.z = 0.1;
+  marker.scale.x = R_;
+  marker.scale.y = R_;
+  marker.scale.z = 1.0;
   marker.color.a = 1.0;
   marker.color.r = 0.0;
   marker.color.g = 1.0;
