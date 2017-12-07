@@ -3,27 +3,43 @@
 
 #include "ed/convex_hull.h"
 #include <visualization_msgs/Marker.h>
+#include <math.h> 
 
 namespace ed
 {
   
 namespace tracking
 {
+  
+#define TIMEOUT_TIME 1.0 // [s] TODO: make configurable variable as in the entity cleared (or is it solved automatically by the MHT?!)
+#define MAX_LINE_ERROR 0.1 // [m]  
+  
   class Circle {
   float x_, y_, R_;
   
 public:  
-  void setValues(float a, float b, float c);
+  void setValues(float x, float y, float R);
   
-  void setMarker(visualization_msgs::Marker& marker);
+  void setMarker(visualization_msgs::Marker& marker, unsigned int ID);
 
 };
 
+void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, geo::Pose3D& pose); 
 
+class Rectangle {
+  float x_, y_, w_, h_, theta_; // x, y of center, width and height of rectangle
+  
+public:  
+  void setValues(float x, float y, float w, float h, float theta);
+  
+  void setMarker(visualization_msgs::Marker& marker, unsigned int ID );
 
+};
 
+void fitRectangle(const std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose); 
 
-void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, float z_min, float z_max, geo::Pose3D& pose); 
+float fitLine(const std::vector<geo::Vec2f>& points, float& angle, geo::Vec2f& centroid, unsigned int& index);
+
 }
 
 
