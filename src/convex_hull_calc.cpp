@@ -61,9 +61,9 @@ void fitCircle ( const std::vector<geo::Vec2f>& points, ed::tracking::Circle* ci
 
 void Circle::setValues ( float x, float y, float R )
 {
-    x_ = x;
-    y_ = y;
-    R_ = R;
+    this->x_ = x;
+    this->y_ = y;
+    this->R_ = R;
 }
 
 void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
@@ -113,9 +113,13 @@ void fitRectangle ( const std::vector<geo::Vec2f>& points, ed::tracking::Rectang
 
   
    if( fit_rectangle ){ // split data at max error and repeat for both left and right lines
+     
+     std::cout << "Try to fit rectangle in data" << std::endl;
+     
      const std::vector<geo::Vec2f> points_low( points.begin(), points.begin() + max_error_index);
      const std::vector<geo::Vec2f> points_hi( points.begin()+ max_error_index, points.end() );
      
+     std::cout << "Try to fit 2 lines" << std::endl;
      float max_error1 = fitLine(points_low, angle1, centroid1, max_error_index1);
      float max_error2 = fitLine(points_hi, angle2, centroid2, max_error_index2);
      
@@ -123,32 +127,41 @@ void fitRectangle ( const std::vector<geo::Vec2f>& points, ed::tracking::Rectang
        std::cout << "WARNING: more line segments needed (is quare assumption valid?)" << std::endl;
      }
      
+     std::cout << "Lines fitted" << std::endl;
      float center_x = (centroid1.x + centroid2.x )*0.5;
      float center_y = (centroid1.y + centroid2.y )*0.5;
      
      //determine width and height
-     float dx = points_low[points_low.size()].x-points_low[0].x;
-     float dy = points_low[points_low.size()].y-points_low[0].y;
+     float dx = points_low[points_low.size()-1].x-points_low[0].x;
+     float dy = points_low[points_low.size()-1].y-points_low[0].y;
      float width = sqrt(dx*dx+dy*dy);
      float theta = atan(dy/dx);
      
-     dx = points_hi[points_hi.size()].x-points_hi[0].x;
-     dy = points_hi[points_hi.size()].y-points_hi[0].y;
+     dx = points_hi[points_hi.size()-1].x-points_hi[0].x;
+     dy = points_hi[points_hi.size()-1].y-points_hi[0].y;
      float height = sqrt(dx*dx+dy*dy);
      
+      std::cout << "Set values of rectangle" << std::endl;
      rectangle->setValues(center_x, center_y, width, height, theta);
    } else 
    {
+     
+     std::cout << "Single line considered" << std::endl;
      float center_x = centroid.x;
      float center_y = centroid.y;
      
-     float dx = points[points.size()].x-points[0].x;
-     float dy = points[points.size()].y-points[0].y;
+     float dx = points[points.size()-1].x-points[0].x;
+     float dy = points[points.size()-1].y-points[0].y;
      float width = sqrt(dx*dx+dy*dy);
      float theta = atan(dy/dx);
      
+     std::cout << "Beginpoint = " << points[0].x << ", Endpoint = " << points[points.size()-1].x << std::endl;
+     
+     std::cout <<"dx, dy, width = " << dx  << ", " << dy  << ", " << width  << std::endl;
+     
      float height = 0.1; // TODO: magic number
      
+     std::cout << "Set values of rectangle (using a single line)" << std::endl;
      rectangle->setValues(center_x, center_y, width, height, theta);
    }
    
@@ -160,7 +173,7 @@ float fitLine ( const std::vector<geo::Vec2f>& points, float& angle, geo::Vec2f&
   
     float x_sum = 0.0, y_sum = 0.0;
     for ( unsigned int i = 0; i < points.size(); ++i ) {
-        std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
+        //std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
         x_sum += points[i].x;
         y_sum += points[i].y;
     }
@@ -224,11 +237,23 @@ float fitLine ( const std::vector<geo::Vec2f>& points, float& angle, geo::Vec2f&
 
 void Rectangle::setValues ( float x, float y, float w, float h, float theta )
 {
-    x_ = x;
-    y_ = y;
-    w_ = w;
-    h_ = h;
-    theta_ = theta;
+  //std::cout << "Going to set values x, y, w, g, theta = " << x << ", " << y << ", " << w << ", " << h  << ", " << theta << std::endl;
+
+    this->x_ = x;
+    std::cout << "x set" << std::endl;
+    
+    this->y_ = y;
+    std::cout << "y set" << std::endl;
+    
+    this->w_ = w;
+    std::cout << "w set" << std::endl;
+    
+    this->h_ = h;
+    std::cout << "h set" << std::endl;
+    
+    this->theta_ = theta;
+    
+    //std::cout << "theta set -> values finished" << std::endl;
 }
 
 void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID )

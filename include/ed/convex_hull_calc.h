@@ -27,7 +27,7 @@ public:
 void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, geo::Pose3D& pose); 
 
 class Rectangle {
-  float x_, y_, w_, h_, theta_; // x, y of center, width and height of rectangle
+  float x_, y_, w_, h_, theta_; // x, y of center, width, height and rotation of rectangle
   
 public:  
   void setValues(float x, float y, float w, float h, float theta);
