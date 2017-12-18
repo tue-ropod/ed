@@ -8,6 +8,131 @@ namespace ed
 namespace tracking
 {
 
+std::vector<float> inscribedRadius ( const std::vector<geo::Vec2f>& points, float* mean, float* std_dev, unsigned int* arg_min )
+{
+
+    Point A ( points[0].x, points[0].y );
+    Point C ( points[points.size() - 1].x, points[points.size() - 1].y );
+
+    std::vector<float> iav ( points.size() - 2 );
+    for ( unsigned int ii = 0; ii < iav.size(); ++ii ) {
+        int jj = ii + 1;
+
+        Point B ( points[jj].x, points[jj].y );
+
+        float c2 = pow ( ( A.x-B.x ), 2.0 ) + pow ( ( A.y-B.y ), 2.0 );
+        float b2 = pow ( ( C.x-A.x ), 2.0 ) + pow ( ( C.y-A.y ), 2.0 );
+        float a2 = pow ( ( C.x-B.x ), 2.0 ) + pow ( ( C.y-B.y ), 2.0 );
+
+        iav[ii] = acos ( - ( b2-a2-c2 ) / ( 2*sqrt ( a2*c2 ) ) );
+
+
+        if ( iav[ii] != iav[ii] ) {
+            //std::cout << "[a2, b2, c2] = " << a2 << ", " << b2 << ", " << c2;
+            //std::cout << " [ax, bx, cx] = " << A.x << ", " << B.x << ", " << C.x;
+            //std::cout << " [ay, by, cy] = " << A.y << ", " << B.y << ", " << C.y << std::endl;
+        }
+
+    }
+
+    *arg_min = std::numeric_limits<int>::quiet_NaN(); // Just an initialization
+    float min_iav = std::numeric_limits<float>::max();
+    for ( unsigned int ii = 0; ii < iav.size() - 4; ++ii ) {
+        float point_to_check = iav[ii+2];
+
+        if ( point_to_check < min_iav && point_to_check == point_to_check ) {
+
+            if ( iav[ii] == iav[ii] && iav[ii+1] == iav[ii+1] && iav[ii+3] == iav[ii+3]  && iav[ii+4] == iav[ii+4] ) {
+                float left = iav[ii];
+                float left_plus1 = iav[ii+1];
+                float right_min1 = iav[ii+3];
+                float right = iav[ii+4];
+
+                // criterion for arg_min including robustness issues: 4 neighbouring points (2 on each side) must me progressively bigger
+                // alternative: all must be larger than the point to check?
+                bool check1 = left > left_plus1;
+                bool check2 = left_plus1 > point_to_check;
+                bool check3 = right_min1 > point_to_check;
+                bool check4 = right > right_min1;
+
+                if ( check1 && check2 && check3 && check4 ) {
+                    min_iav = iav[ii];
+                    *arg_min = ii;
+                }
+            }
+        }
+    }
+
+    std::cout << "arg_min in inscribedRadius = " << *arg_min << std::endl;
+
+// Determine mean and standard deviation of the inscribed radius
+    unsigned int counter = 0;
+    float sum = 0.0;
+    for ( unsigned int i = 0; i < iav.size(); ++i ) {
+        if ( iav[i] == iav[i] ) {
+            sum += iav[i];
+            ++counter;
+        }
+    }
+    *mean = sum / counter;
+
+    std::vector<float> diff ( counter );
+    counter = 0;
+    for ( unsigned int i = 0; i < iav.size(); ++i ) {
+        if ( iav[i] == iav[i] ) {
+            diff[counter] = iav[i] - *mean;
+            ++counter;
+        }
+    }
+
+    /* float sum = std::accumulate ( iav.begin(), iav.end(), 0.0 );
+     *mean = sum / iav.size();
+
+     std::vector<float> diff ( iav.size() );
+     std::transform ( iav.begin(), iav.end(), diff.begin(),
+                      std::bind2nd ( std::minus<float>(), *mean ) );*/
+
+    float sq_sum = std::inner_product ( diff.begin(), diff.end(), diff.begin(), 0.0 );
+    *std_dev = std::sqrt ( sq_sum / counter );
+
+    std::cout << "[mean_iav, std_dev_iav] = [" << *mean << ", " << *std_dev << "]" << std::endl;
+
+    if ( *arg_min > points.size() || *mean != *mean || *std_dev != *std_dev ) {
+        std::cout << "WARNING: NUMBER OF POINTS TOO HIGH!" << std::endl;
+
+        std::cout << "Points = " << std::endl;
+        for ( unsigned int i = 0; i < points.size(); ++i ) {
+            std::cout << points[i].x << ", " << points[i].y << ";";
+        }
+        std::cout << "\n";
+
+
+        std::cout << "iav = " << std::endl;
+        for ( unsigned int i = 0; i < iav.size(); ++i ) {
+            std::cout << iav[i] << ";";
+        }
+        std::cout << "\n";
+
+    } else {
+        std::cout << "Points = " << std::endl;
+        for ( unsigned int i = 0; i < points.size(); ++i ) {
+            std::cout << points[i].x << ", " << points[i].y << ";";
+        }
+         std::cout << "\n";
+
+
+        std::cout << "iav = " << std::endl;
+        for ( unsigned int i = 0; i < iav.size(); ++i ) {
+            std::cout << iav[i] << ";";
+        }
+        std::cout << "\n";
+    }
+
+    return iav;
+
+
+}
+
 //Fast Line, Arc/Circle and Leg Detection from Laser Scan Data in a Player Driver: http://miarn.sourceforge.net/pdf/a1738b.pdf
 
 void fitCircle ( const std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, geo::Pose3D& pose )
@@ -16,7 +141,7 @@ void fitCircle ( const std::vector<geo::Vec2f>& points, ed::tracking::Circle* ci
     // according to https://dtcenter.org/met/users/docs/write_ups/circle_fit.pdf
     float x_avg = 0.0, y_avg = 0.0;
     for ( unsigned int i = 0; i < points.size(); ++i ) {
-        std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
+//         std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
         x_avg += points[i].x;
         y_avg += points[i].y;
     }
@@ -61,9 +186,9 @@ void fitCircle ( const std::vector<geo::Vec2f>& points, ed::tracking::Circle* ci
 
 void Circle::setValues ( float x, float y, float R )
 {
-    this->x_ = x;
-    this->y_ = y;
-    this->R_ = R;
+    x_ = x;
+    y_ = y;
+    R_ = R;
 }
 
 void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
@@ -77,9 +202,6 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
     marker.pose.position.z = 1;
-
-    //std::cout << "MArker: x_, y_, R_" << x_ << ", " << y_ << ", " << R_ << std::endl;
-
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
@@ -95,165 +217,384 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
 
-void fitRectangle ( const std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose )
+bool fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose )
 {
+    /*
+      for ( unsigned int i = 0; i < points.size(); ++i ) {
+          std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
+      }
+    */
     // First determine the lines
     float angle, angle1, angle2;
     geo::Vec2f centroid, centroid1, centroid2;
-    unsigned int max_error_index, max_error_index1, max_error_index2;
-    
-    bool fit_rectangle = false;
+    unsigned int cornerIndex, max_error_index1, max_error_index2;
+
+    bool fitRectangle = false;
+    bool fitSingleline = false;
     std::cout << "Start fitLine" << std::endl;
-    float max_error = fitLine(points, angle, centroid, max_error_index);
-    if( max_error > MAX_LINE_ERROR){
-      fit_rectangle = true;
-    }
     
-    std::cout << "Max error = " << max_error << std::endl;
-
-  
-   if( fit_rectangle ){ // split data at max error and repeat for both left and right lines
-     
-     std::cout << "Try to fit rectangle in data" << std::endl;
-     
-     const std::vector<geo::Vec2f> points_low( points.begin(), points.begin() + max_error_index);
-     const std::vector<geo::Vec2f> points_hi( points.begin()+ max_error_index, points.end() );
-     
-     std::cout << "Try to fit 2 lines" << std::endl;
-     float max_error1 = fitLine(points_low, angle1, centroid1, max_error_index1);
-     float max_error2 = fitLine(points_hi, angle2, centroid2, max_error_index2);
-     
-     if(max_error1 > MAX_LINE_ERROR || max_error2 > MAX_LINE_ERROR){
-       std::cout << "WARNING: more line segments needed (is quare assumption valid?)" << std::endl;
-     }
-     
-     std::cout << "Lines fitted" << std::endl;
-     float center_x = (centroid1.x + centroid2.x )*0.5;
-     float center_y = (centroid1.y + centroid2.y )*0.5;
-     
-     //determine width and height
-     float dx = points_low[points_low.size()-1].x-points_low[0].x;
-     float dy = points_low[points_low.size()-1].y-points_low[0].y;
-     float width = sqrt(dx*dx+dy*dy);
-     float theta = atan(dy/dx);
-     
-     dx = points_hi[points_hi.size()-1].x-points_hi[0].x;
-     dy = points_hi[points_hi.size()-1].y-points_hi[0].y;
-     float height = sqrt(dx*dx+dy*dy);
-     
-      std::cout << "Set values of rectangle" << std::endl;
-     rectangle->setValues(center_x, center_y, width, height, theta);
-   } else 
-   {
-     
-     std::cout << "Single line considered" << std::endl;
-     float center_x = centroid.x;
-     float center_y = centroid.y;
-     
-     float dx = points[points.size()-1].x-points[0].x;
-     float dy = points[points.size()-1].y-points[0].y;
-     float width = sqrt(dx*dx+dy*dy);
-     float theta = atan(dy/dx);
-     
-     std::cout << "Beginpoint = " << points[0].x << ", Endpoint = " << points[points.size()-1].x << std::endl;
-     
-     std::cout <<"dx, dy, width = " << dx  << ", " << dy  << ", " << width  << std::endl;
-     
-     float height = 0.1; // TODO: magic number
-     
-     std::cout << "Set values of rectangle (using a single line)" << std::endl;
-     rectangle->setValues(center_x, center_y, width, height, theta);
-   }
-   
-   
-}
-
-float fitLine ( const std::vector<geo::Vec2f>& points, float& angle, geo::Vec2f& centroid, unsigned int& index)
-{
-  
-    float x_sum = 0.0, y_sum = 0.0;
-    for ( unsigned int i = 0; i < points.size(); ++i ) {
-        //std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
-        x_sum += points[i].x;
-        y_sum += points[i].y;
-    }
+    bool splitData = findCorner(points, cornerIndex );
     
-    centroid.x  = x_sum / points.size();
-    centroid.y  = y_sum / points.size();
-    
-    std::vector<geo::Vec2f> points_corrected = points;
-    float sum_xy = 0.0, sum_squared_diff = 0.0;
-    for ( unsigned int i = 0; i < points.size(); ++i ) {
-        std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
-        points_corrected[i].x -= centroid.x;
-	points_corrected[i].y -= centroid.y;
-	
-	sum_xy += points_corrected[i].x * points_corrected[i].y;
-	sum_squared_diff += points_corrected[i].x * points_corrected[i].x - points_corrected[i].y * points_corrected[i].y;
-    }
-    
-    std::cout << "fitLine 1" << std::endl;
-    
-    float A = sum_squared_diff/sum_xy;
-    float angle1 = -A - sqrt(0.5*(A*A+4));
-    float angle2 = -A + sqrt(0.5*(A*A+4));
-    
-    float error1 = 0.0, error2 = 0.0, max_error1 = 0.0, max_error2 = 0.0, max_error, error; // max error of line with best fit
-    unsigned int error_index1, error_index2;
-    for ( unsigned int i = 0; i < points.size(); ++i ) {
-      // Distance of each point to line
-        error = fabs ( angle1*points_corrected[i].x-points_corrected[i].y ) /sqrt ( angle1*angle1+1 );
-        error1 += error;
+   /* std::vector<float> errors = fitLine ( points, angle, centroid);//, max_error_index );
+    float max_error = *std::max_element ( errors.begin(), errors.end() );
+*/
+    std::cout << "splitData = " << splitData << " @ID " << cornerIndex << std::endl;
+    //if ( max_error > MAX_LINE_ERROR ) {
+    if ( splitData ) {
+        std::cout << "Max error criterion not met, or (1) remove points and try to fit line again, or (2) split points and try to fit square" << std::endl;
 
-        if ( error > max_error1 ) {
-            max_error1 = error;
-	    error_index1 = i;
-        }
+        // check for nan first?
+        unsigned int nPointsLow = cornerIndex;
+        unsigned int nPointsHigh = points.size() - cornerIndex + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
 
-        error = fabs ( angle2*points_corrected[i].x-points_corrected[i].y ) /sqrt ( angle2*angle2+1 );
-        error2 += error;
+        std::cout << "[nPointsLow nPointsHigh] = [" << nPointsLow << ", " << nPointsHigh << "]"  << std::endl;
 
-        if ( error > max_error2 ) {
-            max_error2 = error;
-	    error_index2 = i;
-        }
-
-        if ( error1 < error2 ) {
-            angle = angle1;
-            max_error = max_error1;
-	    index = error_index1;
-        } else {
-            angle = angle2;
-            max_error = max_error2;
-	    index = error_index2;
-        }
-
+        bool fitSingleline = false;
+	bool pointsRemoved = false;
+        if ( nPointsLow < MIN_POINTS_LINEFIT ) { // Part of section too smal -> remove it from the data which are analyzed and try to fit line again
+            points.erase ( points.begin(), points.begin() + nPointsLow - 1 );
+	    pointsRemoved = true;
+        } 
         
+        if ( nPointsHigh < MIN_POINTS_LINEFIT ) {
+            points.erase ( points.end() - ( int )  nPointsHigh + 1,points.end() ); 
+	    pointsRemoved = true;
+        } 
+        
+        
+        
+        if (pointsRemoved && points.size() >= MIN_POINTS_LINEFIT ) {
+	  fitSingleline = true;
+	} else if (pointsRemoved && points.size() < MIN_POINTS_LINEFIT){
+	  return false;
+	} else {
+	 fitRectangle = true; 
+	}
+    } else {
+      fitSingleline = true;
     }
+	
+        
+        /*else if (nPointsLow != nPointsLow){
+
+            std::vector<unsigned int> pointsToRemove;
+            if ( errors[0]  > MAX_LINE_ERROR ) { // Error at end-points too large: remove it
+                pointsToRemove.push_back ( 0 );
+            }
+
+            for ( unsigned int ii = 1; ii < errors.size() - 1; ++ii ) {
+                bool check1 = errors[ii] > MAX_LINE_ERROR;
+                bool check2 = errors[ii - 1] > MAX_LINE_ERROR ||  errors[ii + 1] > MAX_LINE_ERROR; // point itself and one of the neighbours have an error which is too big
+
+                if ( check1 && check2 ) {
+                    pointsToRemove.push_back ( ii );
+                }
+            }
+
+            if ( errors[errors.size()]  > MAX_LINE_ERROR ) {
+                pointsToRemove.push_back ( errors.size() );
+            }
+
+
+            if ( pointsToRemove.size() > 0 ) {
+                for ( unsigned int jj = 0; jj < pointsToRemove.size(); ++jj ) {
+                    points.erase ( points.begin() + pointsToRemove[jj] - jj );
+                }
+
+            } else {
+                fit_rectangle = true;
+            }
+        }
+        else {
+	       fit_rectangle = true;
+	    }
+        
+        std::cout << "Points after removal = " << std::endl;
+        for ( unsigned int i = 0; i < points.size(); ++i ) {
+            std::cout << points[i].x << ", " << points[i].y << ";";
+        }
+        std::cout << "\n";
+
+        if ( redo_linefit ) {
+            float mean_iav, std_dev_iav;
+            std::vector<float> iav = ed::tracking::inscribedRadius ( points, &mean_iav, &std_dev_iav, &min_counter );
+            std::vector<float> errors = fitLine ( points, angle, centroid);//, max_error_index );
+
+            if ( *std::max_element(errors.begin(), errors.end() ) > MAX_LINE_ERROR ) {
+                nPointsLow = min_counter;
+                nPointsHigh = points.size() - min_counter + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
+                if ( nPointsLow < MIN_POINTS_LINEFIT || nPointsHigh < MIN_POINTS_LINEFIT ) { // Minimal number of points required for splitting line
+                    return false;
+                } else {
+                    fit_rectangle = true;
+                }
+            }
+        }
+
+        // check total length of vector
+        // redo linefit and check if max error < max_line_error
+
+        //||   ) { // If one of the segments is very small, remove it from the data to analyse
+}
+*/
+
+
+
     
-    std::cout << "fitLine 2" << std::endl;
-    return max_error;
+// std::cout << "Max error = " << max_error << "for " << points.size() << "Points" << std::endl;
+
+    if ( fitRectangle ) { // split data at max error and repeat for both left and right lines
+
+        std::cout << "Try to fit rectangle in data" << std::endl;
+
+
+        const std::vector<geo::Vec2f> pointsLow ( points.begin(), points.begin() + cornerIndex );
+        const std::vector<geo::Vec2f> pointsHigh ( points.begin() + cornerIndex, points.end() );
+
+        //   std::cout << "Number of Points [low, high, total] = " << points_low.size() << ", " << points_hi.size()  << ", " << points.size() << ", " << std::endl;
+
+        // std::cout << "Try to fit 2 lines" << std::endl;
+        // std::cout << "fit Line 1 with " << points_low.size() << "points" << std::endl;
+        std::vector<float> errors1 = fitLine ( pointsLow, angle1, centroid1);//, max_error_index1 );
+        //  std::cout << "error 1 = " << max_error1 << std::endl;
+
+        //  std::cout << "fit Line 2 with"  << points_hi.size() << " points" << std::endl;
+        std::vector<float> errors2 = fitLine ( pointsHigh, angle2, centroid2);//, max_error_index2 );
+        //  std::cout << "error 2 = " << max_error2 << std::endl;
+
+        float error1 = *std::max_element(errors1.begin(), errors1.end() );
+	float error2 = *std::max_element(errors2.begin(), errors2.end() );
+	
+	std::cout << "Errors determined" << std::endl;
+        if (error1 > MAX_LINE_ERROR || error2 > MAX_LINE_ERROR  ) {
+            std::cout << "WARNING: more line segments needed (is square assumption valid?)" << std::endl;
+            std::cout << " max_error1 = " << error1 << " max_error2 = " << error2 << std::endl;
+            /*
+                        std::cout << "Points = " << std::endl;
+                        for ( unsigned int i = 0; i < points.size(); ++i ) {
+                            std::cout << points[i].x << ", " << points[i].y << std::endl;
+                        }
+                        */
+        }
+
+        //     std::cout << "Lines fitted" << std::endl;
+        //float center_x = ( centroid1.x + centroid2.x ) *0.5;
+        //float center_y = ( centroid1.y + centroid2.y ) *0.5;
+        float center_x = points[cornerIndex].x;//centroid.x;
+        float center_y = points[cornerIndex].y;//centroid.y;
+
+        std::cout << "Center determined" << std::endl;
+
+        //determine width and height
+        float dx = pointsLow[pointsLow.size()-1].x-pointsLow[0].x; // TODO: valid to take maximum and minimum points?
+        float dy = pointsLow[pointsLow.size()-1].y-pointsLow[0].y;
+        float width = sqrt ( dx*dx+dy*dy );
+        float theta = atan2 ( dy, dx ); // TODO: angle on points low alone?
+//	std::cout << "theta before = " << theta << std::endl;
+        //ed::tracking::wrapToInterval(&theta, 0.0, 2*M_PI);
+        //std::cout << "theta after = " << theta << std::endl;
+
+        //   std::cout << "Width and height determined" << std::endl;
+
+        dx = pointsHigh[pointsHigh.size()-1].x-pointsHigh[0].x;
+        dy = pointsHigh[pointsHigh.size()-1].y-pointsHigh[0].y;
+        float depth = sqrt ( dx*dx+dy*dy );
+        std::cout << "dx and dy determined: dx = " << dx << " dy = " << dy << std::endl;
+
+        rectangle->setValues ( center_x, center_y, width, depth, ARBITRARY_HEIGHT, theta );
+        //     std::cout << "Values of rectangle set" << std::endl;
+    } else { // Single line considered
+
+        //     std::cout << "Single line considered" << std::endl;
+        float center_x = points[points.size() - 1].x;//centroid.x;
+        float center_y = points[points.size() - 1].y;//centroid.y;
+
+        float dx = points[points.size()-1].x-points[0].x;
+        float dy = points[points.size()-1].y-points[0].y;
+        float width = sqrt ( dx*dx+dy*dy );
+        float theta = atan2 ( dy, dx );
+        //std::cout << "theta before = " << theta << std::endl;
+        //ed::tracking::wrapToInterval(&theta, 0.0, 2*M_PI);
+//std::cout << "theta after = " << theta << std::endl;
+
+        //    std::cout << "Beginpoint = " << points[0].x << ", Endpoint = " << points[points.size()-1].x << std::endl;
+
+        //      std::cout <<"dx, dy, width = " << dx  << ", " << dy  << ", " << width  << std::endl;
+
+        //     std::cout << "Set values of rectangle (using a single line)" << std::endl;
+        rectangle->setValues ( center_x, center_y, width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
+
+    }
+
+    std::cout << "End of fitRectangle function" << std::endl;
+
+    return true;
+
 }
 
-void Rectangle::setValues ( float x, float y, float w, float h, float theta )
+bool findCorner(const std::vector<geo::Vec2f>& points, unsigned int &ID)
 {
-  //std::cout << "Going to set values x, y, w, g, theta = " << x << ", " << y << ", " << w << ", " << h  << ", " << theta << std::endl;
+  geo::Vec2f startPoint = points[0];
+  geo::Vec2f endPoint = points[points.size() - 1];
+  
+ float a = endPoint.y-startPoint.y;
+ float b = endPoint.x-startPoint.x;
+ float c = endPoint.x*startPoint.y-endPoint.y*startPoint.x;
+ 
+ float length = sqrt( pow(a,2.0) + pow(b,2.0) );
+ 
+ float maxDistance = 0.0;
+ 
+ //std::cout <<"[a, b, c,  length ] = [" << a << ", " << b << ", " << c << ", " << length << "]" << std::endl;
+ 
+ ID = std::numeric_limits<unsigned int>::quiet_NaN();
+ for(unsigned int ii = 1; ii < points.size() - 1; ++ii)
+ {
+   float distance = fabs(a*(points[ii].x)-b*(points[ii].y)+c)/length;
+   
+   // std::cout << "Distance = " << distance << " @ ii = " << ii << " x = " << points[ii].x << " y = " << points[ii].y  << "intermediate = " << a*points[ii].x << ", " << b*(points[ii].y) << std::endl;
+   if(distance > maxDistance)
+   {
+     maxDistance = distance;
+     ID = ii;
+   }
+ }
+ 
+ //std::cout << "maxDistance = " << maxDistance << std::endl;
+ 
+ if( maxDistance >  MIN_DISTANCE_CORNER_DETECTION){
+   return true;
+ } else {
+  return false; 
+ }
+  
+}
 
-    this->x_ = x;
-    std::cout << "x set" << std::endl;
-    
-    this->y_ = y;
-    std::cout << "y set" << std::endl;
-    
-    this->w_ = w;
-    std::cout << "w set" << std::endl;
-    
-    this->h_ = h;
-    std::cout << "h set" << std::endl;
-    
-    this->theta_ = theta;
-    
-    //std::cout << "theta set -> values finished" << std::endl;
+std::vector<float> fitLine ( const std::vector<geo::Vec2f>& points, float& angle, geo::Vec2f& centroid)//, unsigned int& index ) // TODO: centroid not used anymore, can be removed
+{
+  std::cout << "FitLine function started" << std::endl;
+    // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
+    Eigen::MatrixXd m ( points.size(), 2 );
+    Eigen::VectorXd y ( points.size() );
+
+    for ( unsigned int ii = 0; ii < points.size(); ++ii ) {
+        m ( ii, 0 ) = ( double ) 1.0;
+        m ( ii, 1 ) = ( double ) points[ii].x;
+        y ( ii ) = ( double ) points[ii].y;
+    }
+    Eigen::MatrixXd mt ( points.size(), 2 );
+    mt = m.transpose();
+
+    Eigen::VectorXd beta_hat ( 2 );
+    beta_hat = ( mt*m ).inverse() * mt * y;
+
+    angle = atan2 ( beta_hat ( 1 ), 1 );
+
+    std::vector<float> error ( points.size() );
+    for ( unsigned int i = 0; i < points.size(); ++i ) {
+        // Distance of each point to line
+        error[i] = fabs ( -beta_hat ( 1 ) *points[i].x+points[i].y - beta_hat ( 0 ) ) /sqrt ( beta_hat ( 1 ) *beta_hat ( 1 ) +1 ); // distance of a point to a line
+
+        /*if ( error > max_error ) {
+            max_error = error;
+            index = i;
+        }
+        */
+    }
+
+    return error;
+
+
+    /*
+      float x_sum = 0.0, y_sum = 0.0;
+      for ( unsigned int i = 0; i < points.size(); ++i ) {
+          //   std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
+          x_sum += points[i].x;
+          y_sum += points[i].y;
+      }
+
+      centroid.x  = x_sum / points.size();
+      centroid.y  = y_sum / points.size();
+
+      std::cout << "[x_centroid, y_centroid] = " << centroid.x << ", " << centroid.y << std::endl;
+
+      std::vector<geo::Vec2f> points_corrected = points;
+      float sum_xy = 0.0, sum_squared_diff = 0.0;
+      for ( unsigned int i = 0; i < points.size(); ++i ) {
+          //std::cout << "Points = " << points[i].x << ", " << points[i].y << std::endl;
+          points_corrected[i].x -= centroid.x;
+          points_corrected[i].y -= centroid.y;
+
+          sum_xy += points_corrected[i].x * points_corrected[i].y;
+          sum_squared_diff += points_corrected[i].x * points_corrected[i].x - points_corrected[i].y * points_corrected[i].y;
+      }
+
+      //std::cout << "fitLine 1" << std::endl;
+
+      float A = sum_squared_diff/sum_xy;
+      float tan_q1 = 0.5* ( -A - sqrt ( ( A*A+4 ) ) );
+      float tan_q2 = 0.5* ( -A + sqrt ( ( A*A+4 ) ) );
+
+      float angle1 = atan ( tan_q1 );
+      float angle2 = atan ( tan_q2 );
+
+      float error1 = 0.0, error2 = 0.0, max_error1 = 0.0, max_error2 = 0.0, max_error, error; // max error of line with best fit
+      unsigned int error_index1, error_index2;
+      // 2 lines will be possible from the solution: one with maximum error and one with minimal error. We are looking for the one with minimal error
+
+      for ( unsigned int i = 0; i < points.size(); ++i ) {
+          // Distance of each point to line
+          error = fabs ( angle1*points_corrected[i].x+points_corrected[i].y ) /sqrt ( angle1*angle1+1 ); // distance of a point to a line
+          error1 += error;
+
+          if ( error > max_error1 ) {
+              max_error1 = error;
+              error_index1 = i;
+          }
+
+          error = fabs ( angle2*points_corrected[i].x+points_corrected[i].y ) /sqrt ( angle2*angle2+1 );
+          error2 += error;
+
+          if ( error > max_error2 ) {
+              max_error2 = error;
+              error_index2 = i;
+          }
+
+          if ( error1 < error2 ) {
+              angle = angle1;
+              max_error = max_error1;
+              index = error_index1;
+          } else {
+              angle = angle2;
+              max_error = max_error2;
+              index = error_index2;
+          }
+      }
+
+      return max_error; // Maximum error of the line with the best fit
+      */
+
+
+}
+
+void Rectangle::setValues ( float x, float y, float w, float d, float h, float theta )
+{
+    x_ = x;
+    y_ = y;
+    w_ = w;
+    d_ = d;
+    h_ = h;
+    theta_ = theta;
+}
+
+void Rectangle::printValues ( )
+{
+    std::cout << "x_ = " << x_;
+    std::cout << " y_ = " << y_;
+    std::cout << " w_ = " << w_;
+    std::cout << " d_ = " << d_;
+    std::cout << " h_ = " << h_;
+    std::cout << " theta_ = " << theta_ << std::endl;
 }
 
 void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID )
@@ -265,18 +606,27 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID 
     marker.id = ID;
     marker.type = visualization_msgs::Marker::CUBE;
     marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = x_;
-    marker.pose.position.y = y_;
-    marker.pose.position.z = 1;
+    marker.pose.position.x = x_ - 0.5* ( w_*cos ( theta_ ) - d_*sin ( theta_ ) );
+    marker.pose.position.y = y_ - 0.5* ( w_*sin ( theta_ ) + d_*cos ( theta_ ) );
+    marker.pose.position.z = 0.5; // TODO: on height of laser
 
     //std::cout << "MArker: x_, y_, R_" << x_ << ", " << y_ << ", " << R_ << std::endl;
 
-    marker.pose.orientation.x = cos(theta_/2);
-    marker.pose.orientation.y = sin(theta_/2);
-    marker.pose.orientation.z = sin(theta_/2);
-    marker.pose.orientation.w = sin(theta_/2);
+    //marker.pose.orientation = geometry_msgs::geometry_msgs
+
+//quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw);
+
+
+    /*marker.pose.orientation.x = cos(theta_/2);
+    marker.pose.orientation.y = 0;//sin(theta_/2);
+    marker.pose.orientation.z = sin ( theta_/2 );
+    marker.pose.orientation.w = 0;//sin ( theta_/2 );
+    */
+
+    // marker.pose.orientation = createQuaternionMsgFromRollPitchYaw(0.0, 0.0, 0.0);
+    marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( 0.0, 0.0, theta_ );
     marker.scale.x = w_;
-    marker.scale.y = h_;
+    marker.scale.y = d_;
     marker.scale.z = 1.0;
     marker.color.a = 1.0;
     marker.color.r = 0.0;
@@ -285,6 +635,26 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID 
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
+
+void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
+{
+    float delta = upperBound - lowerBound;
+
+    if ( *alpha < lowerBound ) {
+        while ( *alpha < lowerBound ) {
+            *alpha += delta;
+
+            std::cout << "alpha = " << alpha  << std::endl;
+        }
+    } else if ( *alpha >= lowerBound ) {
+        while ( *alpha >= lowerBound ) {
+            *alpha -= delta;
+            std::cout << "alpha = " << alpha  << std::endl;
+        }
+    }
+
+}
+
 
 }
 
