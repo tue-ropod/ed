@@ -25,6 +25,18 @@ namespace tracking
 #define MIN_POINTS_LINEFIT 5 // [-]
 #define ARBITRARY_HEIGHT 0.01 //[m]
 #define ARBITRARY_DEPTH ARBITRARY_HEIGHT
+  
+#define MIN_MEAN_ANGLE_CIRCLE_RAD 80*M_PI/180
+#define MAX_MEAN_ANGLE_CIRCLE_RAD 155*M_PI/180
+#define MIN_DEV_CIRCLE_RAD 8.6*M_PI/180
+#define MAX_DEV_CIRCLE_RAD 23.0*M_PI/180
+  
+enum FITTINGMETHOD{
+    NONE = 1,
+    LINE =   2,
+    CIRCLE =   4,
+    RECTANGLE =   8
+};
 
 class Point
 {
@@ -39,7 +51,7 @@ public:
 
 };
 
-std::vector<float> inscribedRadius ( const std::vector<geo::Vec2f>& points, float* mean, float* std_dev, unsigned int* arg_min );
+std::vector<float> inscribedRadius ( std::vector<geo::Vec2f>& points, float* mean, float* std_dev, unsigned int* arg_min );
 
 class Circle {
   float x_, y_, R_;
@@ -51,7 +63,7 @@ public:
 
 };
 
-void fitCircle(const std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, geo::Pose3D& pose); 
+bool fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, geo::Pose3D& pose );
 
 class Rectangle {
   float x_, y_, w_, d_, h_, theta_; // x, y of center, width, height and rotation of rectangle
@@ -65,13 +77,18 @@ public:
 
 };
 
-bool fitRectangle(std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose); 
+bool fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int* cornerIndex ); 
 
-bool findCorner(const std::vector<geo::Vec2f>& points, unsigned int &ID);
+bool findPossibleCorner(std::vector<geo::Vec2f>& points, unsigned int &ID);
 
-std::vector<float> fitLine(const std::vector<geo::Vec2f>& points, float& angle, geo::Vec2f& centroid);//, unsigned int& index);
+bool fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat );//, unsigned int& index);
 
 void wrapToInterval(float* alpha, float lowerBound, float upperBound);
+
+FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex);
+
+bool fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, unsigned int* ID, visualization_msgs::Marker marker );
+
 
 }
 
