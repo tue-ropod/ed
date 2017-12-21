@@ -59,11 +59,17 @@ class Circle {
 public:  
   void setValues(float x, float y, float R);
   
+  float get_x() {return x_; } ;
+  float get_y() {return y_; } ;
+  float get_R() {return R_; } ;
+  
   void setMarker(visualization_msgs::Marker& marker, unsigned int ID);
+  
+  void printValues();
 
 };
 
-bool fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, geo::Pose3D& pose );
+float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce, geo::Pose3D& pose );
 
 class Rectangle {
   float x_, y_, w_, d_, h_, theta_; // x, y of center, width, height and rotation of rectangle
@@ -77,17 +83,17 @@ public:
 
 };
 
-bool fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int* cornerIndex ); 
+float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int* cornerIndex ); 
 
 bool findPossibleCorner(std::vector<geo::Vec2f>& points, unsigned int &ID);
 
-bool fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat );//, unsigned int& index);
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end ) ;//, unsigned int& index);
 
 void wrapToInterval(float* alpha, float lowerBound, float upperBound);
 
-FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex);
+FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high );
 
-bool fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, unsigned int* ID, visualization_msgs::Marker marker );
+float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, unsigned int* ID, visualization_msgs::Marker* marker,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high );
 
 
 }
