@@ -21,32 +21,33 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
         unsigned int nPointsLow = *cornerIndex + 1; // + 1 because the corner can be used for both lines
         unsigned int nPointsHigh = points.size() - nPointsLow + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
         unsigned int remainingSize = points.size();
-
+	
         bool fitSingleline = false;
         bool pointsRemoved = false;
         if ( nPointsLow < MIN_POINTS_LINEFIT ) { // Part of section too smal -> remove it from the data which are analyzed and try to fit line again
-            *it_low += nPointsLow - 1;
+            *it_low += *cornerIndex;
             remainingSize -= ( nPointsLow - 1 );
             pointsRemoved = true;
         }
-
+        
         if ( nPointsHigh < MIN_POINTS_LINEFIT ) {
             //points.erase ( points.end() - ( int )  nPointsHigh + 1,points.end() );
-            *it_high -= nPointsHigh + 1;
-            remainingSize -= nPointsHigh + 1;
+            *it_high -= *cornerIndex;
+            remainingSize -= (nPointsHigh - 1);
             pointsRemoved = true;
         }
-
+        
         if ( pointsRemoved && remainingSize < MIN_POINTS_LINEFIT ) {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
             return NONE;
         } else if ( pointsRemoved && remainingSize >= MIN_POINTS_LINEFIT ) {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
+	    
             return LINE;
         } else  { // we dit not remove points and a corner is present
             return RECTANGLE;
         }
-
+        
     } else {
         return LINE;
     }
@@ -66,18 +67,15 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
         // fit line, determine length using least-squares method to determine theta
         Eigen::VectorXd beta_hat ( 2 );
         float mean_error = fitLine ( points, beta_hat, *it_low, *it_high ) ;
-
         float theta = atan2 ( beta_hat ( 1 ), 1 );
 
         unsigned int ii_start = std::distance ( points.begin(), *it_low );
         float x_start = points[ii_start].x;
         float y_start = points[ii_start].y; // better to rely on the original points: extreme outliers are already filtered out due to segmentation
-        //float y_start = beta_hat ( 1 ) * x_start + beta_hat ( 0 );
 
         unsigned int ii_end = std::distance ( points.begin(), *it_high );
         float x_end = points[ii_end - 1].x; // considered to be rebust to rely on 1 point, as these are filtered out already during the segmantation phase
         float y_end = points[ii_end - 1].y;
-        //float y_end = beta_hat ( 1 ) * x_end + beta_hat ( 0 );
 
         float dx = x_end - x_start;
         float dy = y_start - y_end;
@@ -85,7 +83,7 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
 
         float reference_x = 0.5* ( x_start + x_end );
         float reference_y = 0.5* ( y_start + y_end );
-
+	
         rectangle->setValues ( reference_x, reference_y, width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
 
         return mean_error;
@@ -290,30 +288,52 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float mean_error1 = fitLine ( points, beta_hat1, points.begin(), it_split );
     float mean_error2 = fitLine ( points, beta_hat2, it_split, points.end() );
 
-    float x_start = points[0].x; // Is this correct in combination with theta?
-    float y_start = beta_hat1 ( 1 ) * x_start + beta_hat1 ( 0 );
+    float x_start1 = points[0].x; // Is this correct in combination with theta?
+    float y_start1 = beta_hat1 ( 1 ) * x_start1 + beta_hat1 ( 0 );
 
     //determine width and height
     float x_end = points[*cornerIndex].x;
     float y_end = points[*cornerIndex].y;
-    float dx = x_start - x_end;
-    float dy = y_start - y_end;
+    float dx = x_start1 - x_end;
+    float dy = y_start1 - y_end;
     float width = sqrt ( dx*dx+dy*dy );
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
 
-    x_start = points[*cornerIndex].x;
-    y_start = points[*cornerIndex].y;
+    float x_start2 = points[*cornerIndex].x;
+    float y_start2 = points[*cornerIndex].y;
     //y_start = beta_hat2 ( 1 ) * x_start + beta_hat2 ( 0 );
 
-    x_end = points[points.size() - 1].x;
-    y_end = points[points.size() - 1].y;
-    dx = x_end - x_start;
-    dy = y_start - y_end;
+    float x_end2 = points[points.size() - 1].x;
+    float y_end2 = points[points.size() - 1].y;
+    dx = x_end2 - x_start2;
+    dy = y_start2 - y_end2;
     float depth = sqrt ( dx*dx+dy*dy );
-
-    float reference_x = x_start - 0.5* ( width*cos ( theta ) - depth*sin ( theta ) );
-    float reference_y = y_start - 0.5* ( width*sin ( theta ) + depth*cos ( theta ) );
-
+    
+    int direction = 1;
+    float center_x = 0.5*(x_start1 + x_end) + 0.5*(x_end2-x_start2);
+    float center_y = 0.5*(y_start1 + y_end) + 0.5*(y_end2-y_start2);
+    
+    float pos_dir_x = x_start1 - 0.5* ( width*cos ( theta ) - depth*sin ( theta ) );
+    float pos_dir_y = y_start1 - 0.5* ( width*sin ( theta ) + depth*cos ( theta ) );
+    
+    float neg_dir_x = x_start1 - 0.5* ( width*cos ( -theta ) - depth*sin ( -theta ) );
+    float neg_dir_y = y_start1 - 0.5* ( width*sin ( -theta ) + depth*cos ( -theta ) );
+    
+    float direction_error_pos2 = pow(center_x - pos_dir_x, 2.0) + pow(center_y - pos_dir_x, 2.0);
+    float direction_error_neg2 = pow(center_x - neg_dir_x, 2.0) + pow(center_y - neg_dir_y, 2.0);
+    
+    if(direction_error_neg2 < direction_error_pos2)
+    {
+      direction = -1;
+    }
+    
+    std::cout << "Pos error = " << direction_error_pos2 << " Neg error = " << direction_error_neg2 << " direction = " << direction << std::endl;
+    
+   /* float reference_x = x_start2 - 0.5* ( width*cos ( direction*theta ) - depth*sin ( direction*theta ) );
+    float reference_y = y_start2 - 0.5* ( width*sin ( direction*theta ) + depth*cos ( direction*theta ) );
+*/
+   float reference_x = center_x;
+   float reference_y = center_y;
     rectangle->setValues ( reference_x, reference_y, width, depth, ARBITRARY_HEIGHT, theta );
 
     unsigned int low_size = *cornerIndex;
@@ -335,16 +355,19 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, unsigned int &ID )
     float maxDistance = 0.0;
 
     ID = std::numeric_limits<unsigned int>::quiet_NaN();
-    for ( unsigned int ii = 1; ii < points.size() - 1; ++ii ) {
-        float distance = fabs ( a* ( points[ii].x )-b* ( points[ii].y ) +c ) /length;
-
-        if ( distance > maxDistance ) {
+    for ( unsigned int ii = 1; ii < points.size() - 1; ++ii ) 
+    {
+        float distance = fabs ( a* ( points[ii].x )-b* ( points[ii].y ) +c ) / length;
+	
+        if ( distance > maxDistance ) 
+	{
             maxDistance = distance;
             ID = ii;
         }
     }
 
-    if ( maxDistance >  MIN_DISTANCE_CORNER_DETECTION ) {
+    if ( maxDistance >  MIN_DISTANCE_CORNER_DETECTION ) 
+    {
         return true;
     } else {
         return false;
@@ -357,15 +380,13 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
 
-    unsigned int size = std::distance ( it_start, it_end );
-
+    unsigned int size = std::distance ( it_start, it_end );;
     Eigen::MatrixXd m ( size, 2 );
     Eigen::VectorXd y ( size );
-
     unsigned int counter = 0;
     unsigned int start = std::distance ( points.begin(), it_start );
     unsigned int end = std::distance ( points.begin(), it_end );
-
+    
     for ( unsigned int ii = start; ii < end; ++ii ) {
         m ( counter, 0 ) = ( double ) 1.0;
         m ( counter, 1 ) = ( double ) points[start + counter].x;
@@ -375,6 +396,7 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
 
     Eigen::MatrixXd mt ( size, 2 );
     mt = m.transpose();
+
     beta_hat = ( mt*m ).inverse() * mt * y;
 
     float error, sum = 0.0;
