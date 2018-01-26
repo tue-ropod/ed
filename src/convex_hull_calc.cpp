@@ -309,36 +309,14 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     dy = y_start2 - y_end2;
     float depth = sqrt ( dx*dx+dy*dy );
     
-    int direction = 1;
     float center_x = 0.5*(x_start1 + x_end) + 0.5*(x_end2-x_start2);
     float center_y = 0.5*(y_start1 + y_end) + 0.5*(y_end2-y_start2);
     
-    float pos_dir_x = x_start1 - 0.5* ( width*cos ( theta ) - depth*sin ( theta ) );
-    float pos_dir_y = y_start1 - 0.5* ( width*sin ( theta ) + depth*cos ( theta ) );
-    
-    float neg_dir_x = x_start1 - 0.5* ( width*cos ( -theta ) - depth*sin ( -theta ) );
-    float neg_dir_y = y_start1 - 0.5* ( width*sin ( -theta ) + depth*cos ( -theta ) );
-    
-    float direction_error_pos2 = pow(center_x - pos_dir_x, 2.0) + pow(center_y - pos_dir_x, 2.0);
-    float direction_error_neg2 = pow(center_x - neg_dir_x, 2.0) + pow(center_y - neg_dir_y, 2.0);
-    
-    if(direction_error_neg2 < direction_error_pos2)
-    {
-      direction = -1;
-    }
-    
-    std::cout << "Pos error = " << direction_error_pos2 << " Neg error = " << direction_error_neg2 << " direction = " << direction << std::endl;
-    
-   /* float reference_x = x_start2 - 0.5* ( width*cos ( direction*theta ) - depth*sin ( direction*theta ) );
-    float reference_y = y_start2 - 0.5* ( width*sin ( direction*theta ) + depth*cos ( direction*theta ) );
-*/
-   float reference_x = center_x;
-   float reference_y = center_y;
-    rectangle->setValues ( reference_x, reference_y, width, depth, ARBITRARY_HEIGHT, theta );
+    rectangle->setValues ( center_x, center_y, width, depth, ARBITRARY_HEIGHT, theta );
 
     unsigned int low_size = *cornerIndex;
     unsigned int high_size = points.size() - *cornerIndex + 1;
-    return ( mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ); // weighted average of error
+    return ( mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ); // average of error
 }
 
 bool findPossibleCorner ( std::vector<geo::Vec2f>& points, unsigned int &ID )
@@ -372,8 +350,6 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, unsigned int &ID )
     } else {
         return false;
     }
-
-
 }
 
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end )  //, unsigned int& index ) // TODO: centroid not used anymore, can be removed
@@ -410,7 +386,6 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     }
 
     return sum/counter;
-
 }
 
 void Rectangle::setValues ( float x, float y, float w, float d, float h, float theta )
