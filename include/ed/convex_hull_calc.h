@@ -11,8 +11,8 @@
 #include <algorithm>
 
 
-#include <Eigen/Dense>
-
+//#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 namespace ed
 {
 
