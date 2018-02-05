@@ -9,7 +9,8 @@ namespace tracking
 {
 
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high )
-{
+{ // Determine is a line or a rectangle should be fitted. In case of a rectangle, the number of elements for both sides should meet the minimum number of points for a line fit
+  // for both lines. Otherwise, a line will be fitted on the remaining points.
 
     bool includeCorner = findPossibleCorner ( points, *cornerIndex );
 
@@ -66,7 +67,7 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
     case LINE: {
         // fit line, determine length using least-squares method to determine theta
         Eigen::VectorXd beta_hat ( 2 );
-        float mean_error = fitLine ( points, beta_hat, *it_low, *it_high ) ;
+        float mean_error2 = fitLine ( points, beta_hat, *it_low, *it_high ) ;
         float theta = atan2 ( beta_hat ( 1 ), 1 );
 
         unsigned int ii_start = std::distance ( points.begin(), *it_low );
@@ -86,96 +87,21 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
 	
         rectangle->setValues ( reference_x, reference_y, width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
 
-        return mean_error;
+        return mean_error2;
     }
 
     case CIRCLE: {
 
-        float mean_error = fitCircle ( points, circle, pose );
-        return mean_error;
+        float mean_error2 = fitCircle ( points, circle, pose );
+        return mean_error2;
 
     }
     case RECTANGLE: {
-        float mean_error = fitRectangle ( points, rectangle, pose , cornerIndex );
-        return mean_error;
+        float mean_error2 = fitRectangle ( points, rectangle, pose , cornerIndex );
+        return mean_error2;
     }
     }
     return false; // end reached without doing something
-}
-
-std::vector<float> inscribedRadius ( std::vector<geo::Vec2f>& points, float* mean, float* std_dev, unsigned int* arg_min )
-{
-
-    Point A ( points[0].x, points[0].y );
-    Point C ( points[points.size() - 1].x, points[points.size() - 1].y );
-
-    std::vector<float> iav ( points.size() - 2 );
-    for ( unsigned int ii = 0; ii < iav.size(); ++ii ) {
-        int jj = ii + 1;
-
-        Point B ( points[jj].x, points[jj].y );
-
-        float c2 = pow ( ( A.x-B.x ), 2.0 ) + pow ( ( A.y-B.y ), 2.0 );
-        float b2 = pow ( ( C.x-A.x ), 2.0 ) + pow ( ( C.y-A.y ), 2.0 );
-        float a2 = pow ( ( C.x-B.x ), 2.0 ) + pow ( ( C.y-B.y ), 2.0 );
-
-        iav[ii] = acos ( - ( b2-a2-c2 ) / ( 2*sqrt ( a2*c2 ) ) );
-    }
-
-    *arg_min = std::numeric_limits<int>::quiet_NaN(); // Just an initialization
-    float min_iav = std::numeric_limits<float>::max();
-    for ( unsigned int ii = 0; ii < iav.size() - 4; ++ii ) {
-        float point_to_check = iav[ii+2];
-
-        if ( point_to_check < min_iav && point_to_check == point_to_check ) {
-
-            if ( iav[ii] == iav[ii] && iav[ii+1] == iav[ii+1] && iav[ii+3] == iav[ii+3]  && iav[ii+4] == iav[ii+4] ) {
-                float left = iav[ii];
-                float left_plus1 = iav[ii+1];
-                float right_min1 = iav[ii+3];
-                float right = iav[ii+4];
-
-                // For corner detection? -> minimum in inscribed radius could be a corner
-                // criterion for arg_min including robustness issues: 4 neighbouring points (2 on each side) must me progressively bigger
-                // alternative: all must be larger than the point to check?
-                bool check1 = left > left_plus1;
-                bool check2 = left_plus1 > point_to_check;
-                bool check3 = right_min1 > point_to_check;
-                bool check4 = right > right_min1;
-
-                if ( check1 && check2 && check3 && check4 ) {
-                    min_iav = iav[ii];
-                    *arg_min = ii;
-                }
-            }
-        }
-    }
-
-// Determine mean and standard deviation of the inscribed radius
-    unsigned int counter = 0;
-    float sum = 0.0;
-    for ( unsigned int i = 0; i < iav.size(); ++i ) {
-        if ( iav[i] == iav[i] ) {
-            sum += iav[i];
-            ++counter;
-        }
-    }
-    *mean = sum / counter;
-
-    std::vector<float> diff ( counter );
-    counter = 0;
-    for ( unsigned int i = 0; i < iav.size(); ++i ) {
-        if ( iav[i] == iav[i] ) {
-            diff[counter] = iav[i] - *mean;
-            ++counter;
-        }
-    }
-
-    float sq_sum = std::inner_product ( diff.begin(), diff.end(), diff.begin(), 0.0 );
-    *std_dev = std::sqrt ( sq_sum / counter );
-
-    return iav;
-
 }
 
 //Fast Line, Arc/Circle and Leg Detection from Laser Scan Data in a Player Driver: http://miarn.sourceforge.net/pdf/a1738b.pdf
@@ -227,7 +153,8 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
     float sum = 0.0;
     for ( unsigned int i = 0; i < points.size(); ++i ) {
         float error = fabs ( sqrt ( pow ( xc - points[i].x, 2.0 ) + pow ( yc - points[i].y, 2.0 ) ) - R ); // distance between a point and a circle;
-        sum += error;
+	float error2 = pow(error, 2.0);
+        sum += error2;
         /*if ( error > MAX_LINE_ERROR ) {
                 return false;
             }
@@ -252,7 +179,7 @@ void Circle::printValues ( )
     std::cout << " R_ = " << R_<< std::endl;
 }
 
-void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
+void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID, const geo::Pose3D& sensor_pose )
 {
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time();
@@ -262,14 +189,14 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
-    marker.pose.position.z = 1;
+    marker.pose.position.z = sensor_pose.getOrigin().getZ();
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
     marker.scale.x = 2*R_;
     marker.scale.y = 2*R_;
-    marker.scale.z = 1.0;
+    marker.scale.z = 0.1;
     marker.color.a = 1.0;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
@@ -352,7 +279,7 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, unsigned int &ID )
     }
 }
 
-float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end )  //, unsigned int& index ) // TODO: centroid not used anymore, can be removed
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end )  //, unsigned int& index ) 
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
 
@@ -381,7 +308,8 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     for ( std::vector<geo::Vec2f>::iterator it = it_start; it != it_end; ++it ) {
         // Distance of each point to line
         error = fabs ( -beta_hat ( 1 ) * points[start + counter].x+points[start + counter].y - beta_hat ( 0 ) ) /sqrt ( beta_hat ( 1 ) *beta_hat ( 1 ) + 1 ); // distance of a point to a line
-        sum += error;
+	float error2 = pow(error, 2.0);
+        sum += error2;
         counter ++;
     }
 
@@ -408,7 +336,7 @@ void Rectangle::printValues ( )
     std::cout << " theta_ = " << theta_ << std::endl;
 }
 
-void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID )
+void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, const geo::Pose3D& sensor_pose )
 {
     // How to incorporate the rotation? -> should follow from the lines
     marker.header.frame_id = "/map";
@@ -419,11 +347,11 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID 
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
-    marker.pose.position.z = 0.5; // TODO: on height of laser
+    marker.pose.position.z = sensor_pose.getOrigin().getZ();
     marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( 0.0, 0.0, theta_ );
     marker.scale.x = w_;
     marker.scale.y = d_;
-    marker.scale.z = 1.0;
+    marker.scale.z = 0.1;
     marker.color.a = 1.0;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
@@ -446,6 +374,30 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
         }
     }
 
+}
+
+probabilitySet determineFeatureProbabilities(float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth)
+{  
+  
+  std::cout << "Error rectangle, circle =  " << errorRectangleSquared << ", " << errorCircleSquared << std::endl;
+  
+  std::cout << "circleRadius = " << circleDiameter << std::endl;
+    
+
+  float probabilityScaling = 1.0;
+  if( circleDiameter > 0.5*typicalCorridorWidth )
+  {
+    // Circles with a very large radius could have a smaller error compared to fitting a line. For the type of environment, this is very unlikely. 
+    // Therefore, the probability of large circles is reduced in an exponential fashion 
+    probabilityScaling = std::exp( -1/(0.5*typicalCorridorWidth)*(circleDiameter -0.5*typicalCorridorWidth) ); 
+  }
+  
+  probabilitySet pSet; 
+  float sum = errorRectangleSquared + errorCircleSquared;
+  pSet.pCircle = probabilityScaling * errorRectangleSquared/sum;
+  pSet.pRectangle = 1.0 - pSet.pCircle;
+  
+  return pSet;    
 }
 
 

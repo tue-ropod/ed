@@ -19,17 +19,13 @@ namespace ed
 namespace tracking
 {
 
-#define TIMEOUT_TIME 1.0 // [s] TODO: make configurable variable as in the entity cleared (or is it solved automatically by the MHT?!)
+ // TODO: make many of variables below configurable/tunable in ED model descriptions.  
+#define TIMEOUT_TIME 1.0 // [s]
 #define MAX_LINE_ERROR 0.05 // [m]  
-#define MIN_DISTANCE_CORNER_DETECTION 0.1 // [m]
+#define MIN_DISTANCE_CORNER_DETECTION 0.01 // [m]
 #define MIN_POINTS_LINEFIT 5 // [-]
-#define ARBITRARY_HEIGHT 0.01 //[m]
+#define ARBITRARY_HEIGHT 0.03 //[m]
 #define ARBITRARY_DEPTH ARBITRARY_HEIGHT
-
-#define MIN_MEAN_ANGLE_CIRCLE_RAD 80*M_PI/180
-#define MAX_MEAN_ANGLE_CIRCLE_RAD 155*M_PI/180
-#define MIN_DEV_CIRCLE_RAD 8.6*M_PI/180
-#define MAX_DEV_CIRCLE_RAD 23.0*M_PI/180
 
 enum FITTINGMETHOD {
     NONE = 1,
@@ -51,8 +47,6 @@ public:
 
 };
 
-std::vector<float> inscribedRadius ( std::vector<geo::Vec2f>& points, float* mean, float* std_dev, unsigned int* arg_min );
-
 class Circle
 {
     float x_, y_, R_;
@@ -70,7 +64,7 @@ public:
         return R_;
     } ;
 
-    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
+    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID,  const geo::Pose3D& sensor_pose );
 
     void printValues();
 
@@ -85,7 +79,7 @@ class Rectangle
 public:
     void setValues ( float x, float y, float w, float d, float h, float theta );
 
-    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
+    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID,  const geo::Pose3D& sensor_pose );
 
     void printValues();
 
@@ -102,6 +96,26 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound );
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high );
 
 float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, unsigned int* ID, visualization_msgs::Marker* marker,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high );
+
+
+// Probabilities
+// class Rectangle
+// {
+// }
+class probabilitySet
+{
+
+public:
+    float pRectangle, pCircle;
+
+    probabilitySet ( double pRectangle_in = 0.0, double pCircle_in = 0.0 ) {
+        pRectangle = pRectangle_in;
+        pCircle = pCircle_in;
+    }
+
+};
+
+probabilitySet determineFeatureProbabilities(float errorRectangleSquared, float errorCircleSquared, float circleRadius, float typicalCorridorWidth);
 
 
 }
