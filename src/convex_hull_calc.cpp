@@ -388,14 +388,14 @@ probabilitySet determineFeatureProbabilities(float errorRectangleSquared, float 
   if( circleDiameter > 0.5*typicalCorridorWidth )
   {
     // Circles with a very large radius could have a smaller error compared to fitting a line. For the type of environment, this is very unlikely. 
-    // Therefore, the probability of large circles is reduced in an exponential fashion 
+    // Therefore, the probability of large circles (diameter > typicalCorridorWidth) is reduced in an exponential fashion 
     probabilityScaling = std::exp( -1/(0.5*typicalCorridorWidth)*(circleDiameter -0.5*typicalCorridorWidth) ); 
   }
   
   probabilitySet pSet; 
   float sum = errorRectangleSquared + errorCircleSquared;
   pSet.pCircle = probabilityScaling * errorRectangleSquared/sum;
-  pSet.pRectangle = 1.0 - pSet.pCircle;
+  pSet.pRectangle = 1.0 - pSet.pCircle; // Only 2 objects now, so the sum of it equals 1
   
   return pSet;    
 }
