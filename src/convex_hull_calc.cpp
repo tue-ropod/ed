@@ -9,8 +9,9 @@ namespace tracking
 {
 
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high )
-{ // Determine is a line or a rectangle should be fitted. In case of a rectangle, the number of elements for both sides should meet the minimum number of points for a line fit
-  // for both lines. Otherwise, a line will be fitted on the remaining points.
+{
+    // Determine is a line or a rectangle should be fitted. In case of a rectangle, the number of elements for both sides should meet the minimum number of points for a line fit
+    // for both lines. Otherwise, a line will be fitted on the remaining points.
 
     bool includeCorner = findPossibleCorner ( points, *cornerIndex );
 
@@ -22,7 +23,7 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
         unsigned int nPointsLow = *cornerIndex + 1; // + 1 because the corner can be used for both lines
         unsigned int nPointsHigh = points.size() - nPointsLow + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
         unsigned int remainingSize = points.size();
-	
+
         bool fitSingleline = false;
         bool pointsRemoved = false;
         if ( nPointsLow < MIN_POINTS_LINEFIT ) { // Part of section too smal -> remove it from the data which are analyzed and try to fit line again
@@ -30,25 +31,25 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
             remainingSize -= ( nPointsLow - 1 );
             pointsRemoved = true;
         }
-        
+
         if ( nPointsHigh < MIN_POINTS_LINEFIT ) {
             //points.erase ( points.end() - ( int )  nPointsHigh + 1,points.end() );
             *it_high -= *cornerIndex;
-            remainingSize -= (nPointsHigh - 1);
+            remainingSize -= ( nPointsHigh - 1 );
             pointsRemoved = true;
         }
-        
+
         if ( pointsRemoved && remainingSize < MIN_POINTS_LINEFIT ) {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
             return NONE;
         } else if ( pointsRemoved && remainingSize >= MIN_POINTS_LINEFIT ) {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
-	    
+
             return LINE;
         } else  { // we dit not remove points and a corner is present
             return RECTANGLE;
         }
-        
+
     } else {
         return LINE;
     }
@@ -57,7 +58,7 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
     return NONE;
 }
 
-float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, unsigned int* ID, visualization_msgs::Marker* marker,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high )
+float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high )
 {
 
     switch ( FITTINGMETHOD ) {
@@ -84,8 +85,8 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
 
         float reference_x = 0.5* ( x_start + x_end );
         float reference_y = 0.5* ( y_start + y_end );
-	
-        rectangle->setValues ( reference_x, reference_y, width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
+
+        rectangle->setValues ( reference_x, reference_y, pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
 
         return mean_error2;
     }
@@ -107,7 +108,6 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
 //Fast Line, Arc/Circle and Leg Detection from Laser Scan Data in a Player Driver: http://miarn.sourceforge.net/pdf/a1738b.pdf
 float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle, geo::Pose3D& pose )
 {
-
     // according to https://dtcenter.org/met/users/docs/write_ups/circle_fit.pdf
     float x_avg = 0.0, y_avg = 0.0;
     for ( unsigned int i = 0; i < points.size(); ++i ) {
@@ -153,22 +153,19 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
     float sum = 0.0;
     for ( unsigned int i = 0; i < points.size(); ++i ) {
         float error = fabs ( sqrt ( pow ( xc - points[i].x, 2.0 ) + pow ( yc - points[i].y, 2.0 ) ) - R ); // distance between a point and a circle;
-	float error2 = pow(error, 2.0);
+        float error2 = pow ( error, 2.0 );
         sum += error2;
-        /*if ( error > MAX_LINE_ERROR ) {
-                return false;
-            }
-            */
     }
 
-    circle->setValues ( xc, yc,  R );
+    circle->setValues ( xc, yc, pose.getOrigin().getZ(),  R );
     return sum/points.size();
 }
 
-void Circle::setValues ( float x, float y, float R )
+void Circle::setValues ( float x, float y, float z, float R )
 {
     x_ = x;
     y_ = y;
+    z_ = z;
     R_ = R;
 }
 
@@ -179,7 +176,7 @@ void Circle::printValues ( )
     std::cout << " R_ = " << R_<< std::endl;
 }
 
-void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID, const geo::Pose3D& sensor_pose )
+void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
 {
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time();
@@ -189,7 +186,7 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID, c
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
-    marker.pose.position.z = sensor_pose.getOrigin().getZ();
+    marker.pose.position.z = z_;
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
@@ -235,11 +232,11 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     dx = x_end2 - x_start2;
     dy = y_start2 - y_end2;
     float depth = sqrt ( dx*dx+dy*dy );
-    
-    float center_x = 0.5*(x_start1 + x_end) + 0.5*(x_end2-x_start2);
-    float center_y = 0.5*(y_start1 + y_end) + 0.5*(y_end2-y_start2);
-    
-    rectangle->setValues ( center_x, center_y, width, depth, ARBITRARY_HEIGHT, theta );
+
+    float center_x = 0.5* ( x_start1 + x_end ) + 0.5* ( x_end2-x_start2 );
+    float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2-y_start2 );
+
+    rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, theta );
 
     unsigned int low_size = *cornerIndex;
     unsigned int high_size = points.size() - *cornerIndex + 1;
@@ -260,26 +257,23 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, unsigned int &ID )
     float maxDistance = 0.0;
 
     ID = std::numeric_limits<unsigned int>::quiet_NaN();
-    for ( unsigned int ii = 1; ii < points.size() - 1; ++ii ) 
-    {
+    for ( unsigned int ii = 1; ii < points.size() - 1; ++ii ) {
         float distance = fabs ( a* ( points[ii].x )-b* ( points[ii].y ) +c ) / length;
-	
-        if ( distance > maxDistance ) 
-	{
+
+        if ( distance > maxDistance ) {
             maxDistance = distance;
             ID = ii;
         }
     }
 
-    if ( maxDistance >  MIN_DISTANCE_CORNER_DETECTION ) 
-    {
+    if ( maxDistance >  MIN_DISTANCE_CORNER_DETECTION ) {
         return true;
     } else {
         return false;
     }
 }
 
-float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end )  //, unsigned int& index ) 
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end )  //, unsigned int& index )
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
 
@@ -289,7 +283,7 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     unsigned int counter = 0;
     unsigned int start = std::distance ( points.begin(), it_start );
     unsigned int end = std::distance ( points.begin(), it_end );
-    
+
     for ( unsigned int ii = start; ii < end; ++ii ) {
         m ( counter, 0 ) = ( double ) 1.0;
         m ( counter, 1 ) = ( double ) points[start + counter].x;
@@ -308,7 +302,7 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     for ( std::vector<geo::Vec2f>::iterator it = it_start; it != it_end; ++it ) {
         // Distance of each point to line
         error = fabs ( -beta_hat ( 1 ) * points[start + counter].x+points[start + counter].y - beta_hat ( 0 ) ) /sqrt ( beta_hat ( 1 ) *beta_hat ( 1 ) + 1 ); // distance of a point to a line
-	float error2 = pow(error, 2.0);
+        float error2 = pow ( error, 2.0 );
         sum += error2;
         counter ++;
     }
@@ -316,10 +310,11 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     return sum/counter;
 }
 
-void Rectangle::setValues ( float x, float y, float w, float d, float h, float theta )
+void Rectangle::setValues ( float x, float y, float z, float w, float d, float h, float theta )
 {
     x_ = x;
     y_ = y;
+    z_ = z;
     w_ = w;
     d_ = d;
     h_ = h;
@@ -336,7 +331,7 @@ void Rectangle::printValues ( )
     std::cout << " theta_ = " << theta_ << std::endl;
 }
 
-void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, const geo::Pose3D& sensor_pose )
+void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID )
 {
     // How to incorporate the rotation? -> should follow from the lines
     marker.header.frame_id = "/map";
@@ -347,7 +342,7 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID,
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
-    marker.pose.position.z = sensor_pose.getOrigin().getZ();
+    marker.pose.position.z = z_;
     marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( 0.0, 0.0, theta_ );
     marker.scale.x = w_;
     marker.scale.y = d_;
@@ -376,30 +371,44 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
 
 }
 
-probabilitySet determineFeatureProbabilities(float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth)
-{  
-  
-  std::cout << "Error rectangle, circle =  " << errorRectangleSquared << ", " << errorCircleSquared << std::endl;
-  
-  std::cout << "circleRadius = " << circleDiameter << std::endl;
-    
+void FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth )
+{
+    if ( !std::isinf ( errorRectangleSquared ) && !std::isinf ( errorCircleSquared ) ) {
+        float probabilityScaling = 1.0;
+        if ( circleDiameter > 0.5*typicalCorridorWidth ) {
+            // Circles with a very large radius could have a smaller error compared to fitting a line. For the type of environment, this is very unlikely.
+            // Therefore, the probability of large circles (diameter > typicalCorridorWidth) is reduced in an exponential fashion
+            probabilityScaling = std::exp ( -1/ ( 0.5*typicalCorridorWidth ) * ( circleDiameter -0.5*typicalCorridorWidth ) );
+        }
 
-  float probabilityScaling = 1.0;
-  if( circleDiameter > 0.5*typicalCorridorWidth )
-  {
-    // Circles with a very large radius could have a smaller error compared to fitting a line. For the type of environment, this is very unlikely. 
-    // Therefore, the probability of large circles (diameter > typicalCorridorWidth) is reduced in an exponential fashion 
-    probabilityScaling = std::exp( -1/(0.5*typicalCorridorWidth)*(circleDiameter -0.5*typicalCorridorWidth) ); 
-  }
-  
-  probabilitySet pSet; 
-  float sum = errorRectangleSquared + errorCircleSquared;
-  pSet.pCircle = probabilityScaling * errorRectangleSquared/sum;
-  pSet.pRectangle = 1.0 - pSet.pCircle; // Only 2 objects now, so the sum of it equals 1
-  
-  return pSet;    
+        float sum = errorRectangleSquared + errorCircleSquared;
+        //   std::cout << "Sum = " << sum << std::endl;
+        float pCircle = probabilityScaling * errorRectangleSquared/sum;
+        float pRectangle =  1.0 - pCircle;  // Only 2 objects now, so the sum of it equals 1
+
+        pmf_.setProbability ( "Rectangle", pRectangle );
+        pmf_.setProbability ( "Circle", pCircle );
+    } else {
+        // Infinity detected on one of the elements: this is the case when the number of points is too small to do a fit. Equal probability set.
+        pmf_.setProbability ( "Rectangle", 0.5 );
+        pmf_.setProbability ( "Circle", 0.5 );
+    }
 }
 
+void FeatureProbabilities::update ( float pRectangle_measured, float pCircle_measured )
+{
+    pbl::PMF pmf_measured = pmf_;
+
+    pmf_measured.setProbability ( "Rectangle", pRectangle_measured );
+    pmf_measured.setProbability ( "Circle", pCircle_measured );
+
+    pmf_.update ( pmf_measured );
+}
+
+void FeatureProbabilities::update( FeatureProbabilities featureProbabilities_in )
+{
+    this->pmf_.update ( featureProbabilities_in.pmf_ );
+}
 
 }
 
