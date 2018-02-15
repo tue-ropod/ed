@@ -325,6 +325,7 @@ void Rectangle::printValues ( )
 {
     std::cout << "x_ = " << x_;
     std::cout << " y_ = " << y_;
+    std::cout << " z_ = " << z_;
     std::cout << " w_ = " << w_;
     std::cout << " d_ = " << d_;
     std::cout << " h_ = " << h_;
@@ -405,7 +406,7 @@ void FeatureProbabilities::update ( float pRectangle_measured, float pCircle_mea
     pmf_.update ( pmf_measured );
 }
 
-void FeatureProbabilities::update( FeatureProbabilities featureProbabilities_in )
+void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_in )
 {
     this->pmf_.update ( featureProbabilities_in.pmf_ );
 }

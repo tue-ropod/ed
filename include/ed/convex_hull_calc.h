@@ -120,24 +120,24 @@ public:
         pmf_.setProbability ( "Circle", pCircle_in );
     };
 
-    float get_pRectangle() {
+    float get_pRectangle() const {
         return ( float ) pmf_.getProbability ( "Rectangle" );
     } ;
 
-    float get_pCircle() {
-        return ( float ) pmf_.getProbability ( "Circle" );;
+    float get_pCircle() const {
+        return ( float ) pmf_.getProbability ( "Circle" );
     } ;
     void setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleRadius, float typicalCorridorWidth );
 
     void update ( float pRectangle_measured, float pCircle_measured );
 
-    void update ( FeatureProbabilities featureProbabilities_in );
+    void update ( FeatureProbabilities& featureProbabilities_in );
 
 };
 
 class FeatureProperties
 {
-    FeatureProbabilities featureProbabilities_;// Probabilities of the features. Is there a need to reset these when there is a switch? Or only when the probability of a feature was low?
+    FeatureProbabilities featureProbabilities_; // Probabilities of the features. Is there a need to reset these when there is a switch? Or only when the probability of a feature was low?
 
     Circle circle_;
 
@@ -148,8 +148,11 @@ public:
         featureProbabilities_.setProbabilities ( pRectangle_in, pCircle_in );
     };
 
-    FeatureProperties ( const FeatureProperties* other ) : featureProbabilities_ ( other->featureProbabilities_ ), circle_ ( other->circle_ ), rectangle_ ( other->rectangle_ ) {};
-
+    FeatureProperties ( const FeatureProperties* other ) {
+        this->featureProbabilities_ = other->featureProbabilities_;
+        this->circle_ = other->circle_;
+        this->rectangle_ = other->rectangle_;
+    };
 
     FeatureProbabilities getFeatureProbabilities() const {
         return featureProbabilities_;
@@ -167,17 +170,15 @@ public:
         this->featureProbabilities_.update ( featureProbabilities_in );
     };
 
-
-
     void setCircle ( Circle circle_in ) {
         circle_ = circle_in;
     };
 
-    Circle getCircle() {
+    Circle getCircle() const {
         return circle_;
     };
 
-    Rectangle getRectangle() {
+    Rectangle getRectangle() const {
         return rectangle_;
     };
 
@@ -185,9 +186,9 @@ public:
         rectangle_ = rectangle_in;
     };
 
-    void updateCircle(); // how? -> x_, y_, R_ TODO
+    void updateCircle(); // TODO improve! how? -> x_, y_, R_ 
 
-    void updateRectangle(); // how? -> x_, y_, w_, d_, h_, theta_ TODO
+    void updateRectangle(); // TODO improve! how? -> x_, y_, w_, d_, h_, theta_  
 
 };
 
