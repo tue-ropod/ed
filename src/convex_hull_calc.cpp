@@ -8,18 +8,31 @@ namespace ed
 namespace tracking
 {
 
-FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high )
+FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
 {
     // Determine is a line or a rectangle should be fitted. In case of a rectangle, the number of elements for both sides should meet the minimum number of points for a line fit
     // for both lines. Otherwise, a line will be fitted on the remaining points.
 
-    bool includeCorner = findPossibleCorner ( points, *cornerIndex );
+    bool includeCorner = findPossibleCorner ( points, *cornerIndex ); // Future step: possibility to include multiple corners
 
     *it_low = points.begin();
     *it_high = points.end();
 
     // We do not necessarily need to remove the points, only when we want to fit a line based on square data -> determine relevant positions
     if ( includeCorner ) {
+
+        // check if a split is required: 2 objects close to each other can form a rectangle in the wrong direction. Model as 2 separate lines
+        geo::Vec2f centerpoint;
+        centerpoint.x = 0.5* ( points[0].x + points[points.size() - 1].x );
+        centerpoint.y = 0.5* ( points[0].y + points[points.size() - 1].y );
+
+        float centerDist2 = pow ( sensor_pose.getOrigin().getX() - centerpoint.x, 2.0 ) + pow ( sensor_pose.getOrigin().getY() - centerpoint.y, 2.0 );
+        float cornerDist2 = pow ( sensor_pose.getOrigin().getX() - points[*cornerIndex].x, 2.0 ) + pow ( sensor_pose.getOrigin().getY() - points[*cornerIndex].y, 2.0 );
+
+        if ( centerDist2 < cornerDist2 ) {
+            return SPLIT;
+        }
+
         unsigned int nPointsLow = *cornerIndex + 1; // + 1 because the corner can be used for both lines
         unsigned int nPointsHigh = points.size() - nPointsLow + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
         unsigned int remainingSize = points.size();
@@ -58,7 +71,7 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
     return NONE;
 }
 
-float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high )
+float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
 {
 
     switch ( FITTINGMETHOD ) {
@@ -66,43 +79,37 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
         return std::numeric_limits<float>::infinity();
     }
     case LINE: {
-        // fit line, determine length using least-squares method to determine theta
-        Eigen::VectorXd beta_hat ( 2 );
-        float mean_error2 = fitLine ( points, beta_hat, *it_low, *it_high ) ;
-        float theta = atan2 ( beta_hat ( 1 ), 1 );
-
-        unsigned int ii_start = std::distance ( points.begin(), *it_low );
-        float x_start = points[ii_start].x;
-        float y_start = points[ii_start].y; // better to rely on the original points: extreme outliers are already filtered out due to segmentation
-
-        unsigned int ii_end = std::distance ( points.begin(), *it_high );
-        float x_end = points[ii_end - 1].x; // considered to be rebust to rely on 1 point, as these are filtered out already during the segmantation phase
-        float y_end = points[ii_end - 1].y;
-
-        float dx = x_end - x_start;
-        float dy = y_start - y_end;
-        float width = sqrt ( dx*dx+dy*dy );
-
-        float reference_x = 0.5* ( x_start + x_end );
-        float reference_y = 0.5* ( y_start + y_end );
-
-        rectangle->setValues ( reference_x, reference_y, pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
-
-        return mean_error2;
+        return setRectangularParametersForLine ( points,  it_low,  it_high, rectangle, sensor_pose );
     }
-
     case CIRCLE: {
-
-        float mean_error2 = fitCircle ( points, circle, pose );
-        return mean_error2;
-
+        return fitCircle ( points, circle, pose );
     }
     case RECTANGLE: {
-        float mean_error2 = fitRectangle ( points, rectangle, pose , cornerIndex );
-        return mean_error2;
+        return fitRectangle ( points, rectangle, pose , cornerIndex );
+    }
+    case SPLIT: {
+        return setRectangularParametersForLine ( points,  it_low,  it_high, rectangle, sensor_pose );
     }
     }
     return false; // end reached without doing something
+}
+
+geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end )
+{
+    geo::Vec2f avg_point;
+    avg_point.x = avg_point.y= 0.0;
+
+    for ( std::vector<geo::Vec2f>::const_iterator it = it_start; it != it_end; ++it ) {
+        geo::Vec2f point = *it;
+        avg_point.x += point.x;
+        avg_point.y += point.y;
+    }
+
+    unsigned int nElements = std::distance ( it_start, it_end );
+    avg_point.x /= nElements;
+    avg_point.y /= nElements;
+
+    return ( avg_point );
 }
 
 //Fast Line, Arc/Circle and Leg Detection from Laser Scan Data in a Player Driver: http://miarn.sourceforge.net/pdf/a1738b.pdf
@@ -194,7 +201,7 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.scale.x = 2*R_;
     marker.scale.y = 2*R_;
     marker.scale.z = 0.1;
-    marker.color.a = 1.0;
+    marker.color.a = 0.5;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
     marker.color.b = 0.0;
@@ -218,17 +225,19 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     //determine width and height
     float x_end = points[*cornerIndex].x;
     float y_end = points[*cornerIndex].y;
+   // float y_end = beta_hat1 ( 1 ) * x_end + beta_hat1 ( 0 );
     float dx = x_start1 - x_end;
     float dy = y_start1 - y_end;
     float width = sqrt ( dx*dx+dy*dy );
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
 
-    float x_start2 = points[*cornerIndex].x;
-    float y_start2 = points[*cornerIndex].y;
+    float x_start2 = x_end;
+    float y_start2 = y_end;
     //y_start = beta_hat2 ( 1 ) * x_start + beta_hat2 ( 0 );
 
     float x_end2 = points[points.size() - 1].x;
     float y_end2 = points[points.size() - 1].y;
+    //float y_end2 = beta_hat2 ( 1 ) * x_end2 + beta_hat2 ( 0 );
     dx = x_end2 - x_start2;
     dy = y_start2 - y_end2;
     float depth = sqrt ( dx*dx+dy*dy );
@@ -310,6 +319,33 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     return sum/counter;
 }
 
+float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose )
+{
+    Eigen::VectorXd beta_hat ( 2 );
+    float mean_error2 = fitLine ( points, beta_hat, *it_low, *it_high ) ;
+    float theta = atan2 ( beta_hat ( 1 ), 1 );
+
+    unsigned int ii_start = std::distance ( points.begin(), *it_low );
+    float x_start = points[ii_start].x;
+    float y_start = points[ii_start].y; // better to rely on the original points: extreme outliers are already filtered out due to segmentation
+
+    unsigned int ii_end = std::distance ( points.begin(), *it_high );
+    float x_end = points[ii_end - 1].x; // considered to be rebust to rely on 1 point, as these are filtered out already during the segmantation phase
+    float y_end = points[ii_end - 1].y;
+
+    float dx = x_end - x_start;
+    float dy = y_start - y_end;
+    float width = sqrt ( dx*dx+dy*dy );
+
+    float center_x = 0.5* ( x_start + x_end );
+    float center_y = 0.5* ( y_start + y_end );
+    //float center_y = beta_hat ( 1 ) * center_x + beta_hat ( 0 );
+
+    rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
+
+    return mean_error2;
+}
+
 void Rectangle::setValues ( float x, float y, float z, float w, float d, float h, float theta )
 {
     x_ = x;
@@ -348,7 +384,7 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID 
     marker.scale.x = w_;
     marker.scale.y = d_;
     marker.scale.z = 0.1;
-    marker.color.a = 1.0;
+    marker.color.a = 0.5;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
     marker.color.b = 0.0;
@@ -383,7 +419,6 @@ void FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSqu
         }
 
         float sum = errorRectangleSquared + errorCircleSquared;
-        //   std::cout << "Sum = " << sum << std::endl;
         float pCircle = probabilityScaling * errorRectangleSquared/sum;
         float pRectangle =  1.0 - pCircle;  // Only 2 objects now, so the sum of it equals 1
 

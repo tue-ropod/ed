@@ -24,7 +24,7 @@ namespace tracking
 // TODO: make many of variables below configurable/tunable in ED model descriptions?
 #define TIMEOUT_TIME 1.0 // [s]
 #define MAX_LINE_ERROR 0.05 // [m]  
-#define MIN_DISTANCE_CORNER_DETECTION 0.01 // [m]
+#define MIN_DISTANCE_CORNER_DETECTION 0.05 // [m]
 #define MIN_POINTS_LINEFIT 5 // [-]
 #define ARBITRARY_HEIGHT 0.03 //[m]
 #define ARBITRARY_DEPTH ARBITRARY_HEIGHT
@@ -33,7 +33,8 @@ enum FITTINGMETHOD {
     NONE = 1,
     LINE =   2,
     CIRCLE =   4,
-    RECTANGLE =   8
+    RECTANGLE =   8,
+    SPLIT= 16
 };
 
 class Point
@@ -96,12 +97,15 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, unsigned int &ID );
 
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end ) ;//, unsigned int& index);
 
+float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose );
+
 void wrapToInterval ( float* alpha, float lowerBound, float upperBound );
 
-FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high );
+FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose );
 
-float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high );
+float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose );
 
+geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end );
 
 // Probabilities
 class FeatureProbabilities
