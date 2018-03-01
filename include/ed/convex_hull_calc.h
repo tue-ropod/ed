@@ -77,7 +77,7 @@ public:
 struct greater
 {
     template<class T>
-    bool operator()(T const &a, T const &b) const { return a > b; }
+    bool operator()(T const &a, T const &b) const { return a < b; }
 };
 
 struct laserSegments
@@ -101,15 +101,15 @@ public:
 
 };
 
-float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int* cornerIndex );
+float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int cornerIndex );
 
-bool findPossibleCorner ( std::vector< geo::Vec2f >& points, std::vector< unsigned int >* IDs, std::vector< geo::Vec2f >::iterator it_start, std::vector< geo::Vec2f >::iterator it_end );
+bool findPossibleCorner ( std::vector< geo::Vec2f >& points, std::vector< unsigned int >* IDs, std::vector< geo::Vec2f >::iterator* it_start, std::vector< geo::Vec2f >::iterator* it_end );
 
 bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices );
 
 bool checkForSplit ( std::vector<geo::Vec2f>& points, unsigned int &ID,const geo::Pose3D& sensor_pose,  unsigned int cornerIndex );
 
-float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end ) ;//, unsigned int& index);
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end ) ;//, unsigned int& index);
 
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose );
 
@@ -117,7 +117,7 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound );
 
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, std::vector<unsigned int>* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose );
 
-float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose);
+float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD, std::vector<unsigned int>* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose);
 
 geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end );
 

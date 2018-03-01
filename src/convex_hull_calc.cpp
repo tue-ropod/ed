@@ -12,18 +12,18 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, std::vector<unsig
 {
     // Determine is a line or a rectangle should be fitted. In case of a rectangle, the number of elements for both sides should meet the minimum number of points for a line fit
     // for both lines. Otherwise, a line will be fitted on the remaining points.
- 
-    bool includeCorner = findPossibleCorner ( points, cornerIndex, points.begin(), points.end() ); // Future step: possibility to include multiple corners
-
+  
     *it_low = points.begin();
     *it_high = points.end();
+ 
+    bool includeCorner = findPossibleCorner ( points, cornerIndex, it_low, it_high ); // Future step: possibility to include multiple corners
 
     // We do not necessarily need to remove the points, only when we want to fit a line based on square data -> determine relevant positions
     if ( includeCorner ) {
         unsigned int nPointsLow = cornerIndex->back() + 1; // + 1 because the corner can be used for both lines
         unsigned int nPointsHigh = points.size() - nPointsLow + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
         unsigned int remainingSize = points.size();
-
+	
         bool fitSingleline = false;
         bool pointsRemoved = false;
         if ( nPointsLow < MIN_POINTS_LINEFIT ) { // Part of section too smal -> remove it from the data which are analyzed and try to fit line again
@@ -40,11 +40,10 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, std::vector<unsig
         }
 
         if ( pointsRemoved && remainingSize < MIN_POINTS_LINEFIT ) {
-            cornerIndex->back() = std::numeric_limits<unsigned int>::quiet_NaN();
+            cornerIndex->erase( cornerIndex->end() - 1, cornerIndex->end() ); // the range includes all the elements between first and last, including the element pointed by first but not the one pointed by last.
             return NONE;
         } else if ( pointsRemoved && remainingSize >= MIN_POINTS_LINEFIT ) {
-            cornerIndex->back() = std::numeric_limits<unsigned int>::quiet_NaN();
-
+            cornerIndex->erase( cornerIndex->end() - 1, cornerIndex->end() );
             return LINE;
         } else  { // we dit not remove points and a corner is present
             return RECTANGLE;
@@ -54,13 +53,11 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, std::vector<unsig
         return LINE;
     }
 
-
     return NONE;
 }
 
-float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose)
-{
-
+float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  std::vector<unsigned int>* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose)
+{  
     switch ( FITTINGMETHOD ) {
     case NONE: {
         return std::numeric_limits<float>::infinity();
@@ -71,8 +68,8 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
     case CIRCLE: {
         return fitCircle ( points, circle, pose );
     }
-    case RECTANGLE: {
-        return fitRectangle ( points, rectangle, pose , cornerIndex );
+    case RECTANGLE: {      
+        return fitRectangle ( points, rectangle, pose , cornerIndex->back() );
     }
 //     case SPLIT: {
 //         return setRectangularParametersForLine ( points,  it_low,  it_high, rectangle, sensor_pose ); // TODO: improve
@@ -196,23 +193,25 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
 
-float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int* cornerIndex )
+float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int cornerIndex )
 {
-    std::vector<geo::Vec2f>::iterator it_split = points.begin() + *cornerIndex;
+    std::vector<geo::Vec2f>::iterator it_start = points.begin();
+    std::vector<geo::Vec2f>::iterator it_split = points.begin() + cornerIndex;
+    std::vector<geo::Vec2f>::iterator it_end = points.end();
 
     Eigen::VectorXd beta_hat1 ( 2 ), beta_hat2 ( 2 );
     bool validFit1, validFit2;
 
-    float mean_error1 = fitLine ( points, beta_hat1, points.begin(), it_split );
-    float mean_error2 = fitLine ( points, beta_hat2, it_split, points.end() );
+    float mean_error1 = fitLine ( points, beta_hat1, &it_start, &it_split );
+    float mean_error2 = fitLine ( points, beta_hat2, &it_split, &it_end );
 
     float x_start1 = points[0].x; // Is this correct in combination with theta?
     float y_start1 = beta_hat1 ( 1 ) * x_start1 + beta_hat1 ( 0 );
 
     //determine width and height
-    float x_end = points[*cornerIndex].x;
-    float y_end = points[*cornerIndex].y;
-   // float y_end = beta_hat1 ( 1 ) * x_end + beta_hat1 ( 0 );
+    float x_end = points[cornerIndex].x;
+    float y_end = points[cornerIndex].y;
+    // float y_end = beta_hat1 ( 1 ) * x_end + beta_hat1 ( 0 );
     float dx = x_start1 - x_end;
     float dy = y_start1 - y_end;
     float width = sqrt ( dx*dx+dy*dy );
@@ -234,41 +233,40 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
 
     rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, theta );
 
-    unsigned int low_size = *cornerIndex;
-    unsigned int high_size = points.size() - *cornerIndex + 1;
+    unsigned int low_size = cornerIndex;
+    unsigned int high_size = points.size() - cornerIndex + 1;
     return ( mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ); // average of error
 }
 
-bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *IDs, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end )
+bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *IDs, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )
 {
     float maxDistance = 0.0;
     unsigned int ID = std::numeric_limits<unsigned int>::quiet_NaN();
+    
+    geo::Vec2f startPoint = **it_start;
+    geo::Vec2f endPoint = *(*it_end - 1);
+    
+    float a = endPoint.y-startPoint.y;
+    float b = endPoint.x-startPoint.x;
+    float c = endPoint.x*startPoint.y-endPoint.y*startPoint.x;
 
-    for ( std::vector<geo::Vec2f>::const_iterator it = it_start; it != it_end; ++it ) {
+    float length = sqrt ( pow ( a,2.0 ) + pow ( b,2.0 ) );
 
-        geo::Vec2f startPoint = *it_start;
-        geo::Vec2f endPoint = *it_end;
+    // See https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+    for ( std::vector<geo::Vec2f>::iterator it = *it_start + 1; it != *it_end - 1; ++it ) {
 
-        float a = endPoint.y-startPoint.y;
-        float b = endPoint.x-startPoint.x;
-        float c = endPoint.x*startPoint.y-endPoint.y*startPoint.x;
+        geo::Vec2f point = *it;
+        float distance = fabs ( a* ( point.x )-b* ( point.y ) +c ) / length;
 
-        float length = sqrt ( pow ( a,2.0 ) + pow ( b,2.0 ) );
-
-        for ( std::vector<geo::Vec2f>::iterator it = it_start; it != it_end; ++it ) {
-            geo::Vec2f point = *it;
-            float distance = fabs ( a* ( point.x )-b* ( point.y ) +c ) / length;
-
-            if ( distance > maxDistance ) {
-                maxDistance = distance;
-                ID = std::distance ( points.begin(), it );
-                //  unsigned int nElements = std::distance ( it_start, it_end );
-            }
+        if ( distance > maxDistance ) {
+            maxDistance = distance;
+            ID = std::distance ( points.begin(), it );
+            //  unsigned int nElements = std::distance ( it_start, it_end );
         }
     }
 
     if ( maxDistance >  MIN_DISTANCE_CORNER_DETECTION ) {
-      IDs->push_back(ID);
+        IDs->push_back ( ID );
         return true;
     } else {
         return false;
@@ -278,9 +276,13 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned 
 
 bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices )
 {
+    // Check in section if a corner is present. If that is the case, split the data at this corner, and check for both parts if another corner is present.
     std::vector<laserSegments> segments;
+    
+    std::vector<geo::Vec2f>::iterator it_start = points.begin();
+    std::vector<geo::Vec2f>::iterator it_end = points.end();
 
-    if ( findPossibleCorner ( points, cornerIndices, points.begin(), points.end() ) ) {
+    if ( findPossibleCorner ( points, cornerIndices, &it_start, &it_end ) ) { // -1 because std::vector::end returns an iterators to one-past-the-end of the container. The element just before is then the last element in the vector.
         laserSegments segmentToAdd;
         segmentToAdd.begin = points.begin();
         segmentToAdd.end = points.begin() + cornerIndices->back();
@@ -290,7 +292,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
         }
 
         segmentToAdd.begin = points.begin() + cornerIndices->back();
-        segmentToAdd.end = points.end();
+        segmentToAdd.end = points.end() - 1;
 
         if ( segmentToAdd.end - segmentToAdd.begin > MIN_POINTS_LINEFIT ) {
             segments.push_back ( segmentToAdd );
@@ -300,7 +302,9 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
             laserSegments laserSegment = segments[ii];
             geo::Vec2f pointEnd =  *laserSegment.end;
 
-            if ( findPossibleCorner ( points, cornerIndices, laserSegment.begin, laserSegment.end ) ) {
+            bool test = findPossibleCorner ( points, cornerIndices, &laserSegment.begin, &laserSegment.end );
+
+            if ( test ) {
 
                 segmentToAdd.begin = laserSegment.begin;
                 segmentToAdd.end = points.begin() + cornerIndices->back();
@@ -315,7 +319,6 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
                 if ( segmentToAdd.end - segmentToAdd.begin > MIN_POINTS_LINEFIT ) {
                     segments.push_back ( segmentToAdd );
                 }
-
             }
         }
 
@@ -343,19 +346,16 @@ bool checkForSplit ( std::vector<geo::Vec2f>& points, unsigned int &ID,const geo
 	  return false;
 }
 
-float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator it_start, std::vector<geo::Vec2f>::iterator it_end )  //, unsigned int& index )
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )  //, unsigned int& index )
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
 
-    unsigned int size = std::distance ( it_start, it_end );;
+    unsigned int size = std::distance ( *it_start, *it_end );;
     Eigen::MatrixXd m ( size, 2 );
     Eigen::VectorXd y ( size );
     unsigned int counter = 0;
-  //  unsigned int start = std::distance ( points.begin(), it_start );
-   // unsigned int end = std::distance ( points.begin(), it_end );
-
-    //for ( unsigned int ii = start; ii < end; ++ii ) {
-   for ( std::vector<geo::Vec2f>::iterator it = it_start; it != it_end; ++it ) {
+    
+   for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) {
      geo::Vec2f point = *it;
         m ( counter, 0 ) = ( double ) 1.0;
         m ( counter, 1 ) = ( double ) point.x;
@@ -371,7 +371,7 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     float error, sum = 0.0;
 
     counter = 0;
-    for ( std::vector<geo::Vec2f>::iterator it = it_start; it != it_end; ++it ) {
+    for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) {
         // Distance of each point to line
       geo::Vec2f point = *it;
         error = fabs ( -beta_hat ( 1 ) * point.x+point.y - beta_hat ( 0 ) ) /sqrt ( beta_hat ( 1 ) *beta_hat ( 1 ) + 1 ); // distance of a point to a line
@@ -386,7 +386,8 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose )
 {
     Eigen::VectorXd beta_hat ( 2 );
-    float mean_error2 = fitLine ( points, beta_hat, *it_low, *it_high ) ;
+    float mean_error2 = fitLine ( points, beta_hat, it_low, it_high ) ;
+    
     float theta = atan2 ( beta_hat ( 1 ), 1 );
 
     unsigned int ii_start = std::distance ( points.begin(), *it_low );
@@ -406,7 +407,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
     //float center_y = beta_hat ( 1 ) * center_x + beta_hat ( 0 );
 
     rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
-
+    
     return mean_error2;
 }
 
