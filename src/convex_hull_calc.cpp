@@ -16,49 +16,42 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
     *it_low = points.begin();
     *it_high = points.end();
 
-    //bool includeCorner = findPossibleCorner ( points, cornerIndex, it_low, it_high );
-std::cout << "Hatseflats1" << std::endl;
     bool includeCorner = ( *cornerIndex > 0 ); // cornerIndex is not NaN
-std::cout << "Hatseflats2 cornerIndex = " << *cornerIndex <<  "includeCorner = " << includeCorner << std::endl;
+
     // In the case of including a corner, check if both segments have enough points to describe a line with. If not, do not use these data.
     if ( includeCorner ) {
-      std::cout << "Hatseflats3" << std::endl;
         unsigned int nPointsLow = *cornerIndex + 1; // + 1 because the corner can be used for both lines
         unsigned int nPointsHigh = points.size() - nPointsLow + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
         unsigned int remainingSize = points.size();
 
-	std::cout << "Hatseflats4" << std::endl;
-	
         bool fitSingleline = false;
         bool pointsRemoved = false;
-	std::cout << "Hatseflats5" << std::endl;
+
         if ( nPointsLow < MIN_POINTS_LINEFIT ) { // Part of section too smal -> remove it from the data which are analyzed and try to fit line again
             *it_low += *cornerIndex;
             remainingSize -= ( nPointsLow - 1 );
             pointsRemoved = true;
         }
-std::cout << "Hatseflats6" << std::endl;
+        
         if ( nPointsHigh < MIN_POINTS_LINEFIT ) {
             *it_high -= *cornerIndex;
             remainingSize -= ( nPointsHigh - 1 );
             pointsRemoved = true;
         }
-std::cout << "Hatseflats7" << std::endl;
+
         if ( pointsRemoved && remainingSize < MIN_POINTS_LINEFIT ) {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
-            return NONE;
+	    return NONE;
+	    
         } else if ( pointsRemoved && remainingSize >= MIN_POINTS_LINEFIT ) {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
             return LINE;
         } else  { // we dit not remove points and a corner is present
             return RECTANGLE;
         }
-std::cout << "Hatseflats8" << std::endl;
     } else {
-      std::cout << "Hatseflats9" << std::endl;
         return LINE;
     }
-std::cout << "Hatseflats10" << std::endl;
     return NONE;
 }
 
@@ -66,26 +59,17 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
 {
     switch ( FITTINGMETHOD ) {
     case NONE: {
-      std::cout << "hoi1" << std::endl;
         return std::numeric_limits<float>::infinity();
     }
     case LINE: {
-      std::cout << "hoi2" << std::endl;
         return setRectangularParametersForLine ( points,  it_low,  it_high, rectangle, sensor_pose );
     }
     case CIRCLE: {
-      std::cout << "hoi3" << std::endl;
         return fitCircle ( points, circle, pose );
     }
     case RECTANGLE: {
-      std::cout << "hoi4, cornerIdex = " << *cornerIndex;
-      std::cout << "test = " << *cornerIndex<< std::endl;
-      std::cout << "pointsSize = " << points.size() << std::endl;
         return fitRectangle ( points, rectangle, pose , *cornerIndex );
     }
-//     case SPLIT: {
-//         return setRectangularParametersForLine ( points,  it_low,  it_high, rectangle, sensor_pose ); // TODO: improve
-//     }
     }
     return false; // end reached without doing something
 }
