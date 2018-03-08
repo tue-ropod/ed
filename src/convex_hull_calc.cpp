@@ -506,6 +506,9 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
     this->pmf_.update ( featureProbabilities_in.pmf_ );
 }
 
+// For point associations to rectangle: https://stackoverflow.com/questions/5254838/calculating-distance-between-a-point-and-a-rectangular-box-nearest-point
+// For point associations to circle: https://math.stackexchange.com/questions/1429609/how-to-find-the-distance-from-a-point-outside-a-circle-to-any-point-on-a-circle
+
 
 }
 
