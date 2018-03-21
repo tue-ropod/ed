@@ -52,22 +52,23 @@ public:
 class Circle
 {
     float x_, y_, z_, R_;
+    
+    float P_; // estimated covariance of the kalman filter to describe the radius
 
 public:
     void setValues ( float x, float y, float R, float z );
-
-    float get_x() {
-        return x_;
-    } ;
-    float get_y() {
-        return y_;
-    } ;
-    float get_z() {
-        return z_;
-    } ;
-    float get_R() {
-        return R_;
-    } ;
+    
+    float get_x() { return x_; } ;
+    float get_y() { return y_; } ;
+    float get_z() { return z_; } ;
+    float get_R() { return R_; } ;
+    float get_P() { return P_; } ;
+    
+    void set_x( float x ) { x_ = x; } ;
+    void set_y( float y ) { y_ = y; } ;
+    void set_z( float z ) { z_ = z; } ;
+    void set_R( float R ) { R_ = R; } ;
+    void set_P( float P ) { P_ = P; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
 
@@ -91,9 +92,27 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce,
 class Rectangle
 {
     float x_, y_, z_, w_, d_, h_, theta_; // x, y of center, width, height and rotation of rectangle
+    
+    Eigen::MatrixXd P_;
 
 public:
     void setValues ( float x, float y, float z, float w, float d, float h, float theta );
+    
+    float get_x() { return x_; } ;
+    float get_y() { return y_; } ;
+    float get_z() { return z_; } ;
+    float get_w() { return w_; } ;
+    float get_d() { return d_; } ;
+    float get_theta() { return theta_; } ;
+    Eigen::MatrixXd get_P() { return P_; } ;
+    
+    void set_x( float x ) { x_ = x; } ;
+    void set_y( float y ) { y_ = y; } ;
+    void set_z( float z ) { z_ = z; } ;
+    void set_w( float w ) { w_ = w; } ;
+    void set_d( float d ) { d_ = d; } ;
+    void set_theta( float theta ) { theta_ = theta; } ;
+    void set_P( Eigen::MatrixXd P ) { P_ = P; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
 
@@ -204,11 +223,13 @@ public:
         rectangle_ = rectangle_in;
     };
 
-    void updateCircle(); // TODO improve! how? -> x_, y_, R_ 
+    void updateCircle(float Q_k, float R_k, float z_k); // z = observation // TODO improve! how? -> x_, y_, R_ Kalman-Filter with constant size model
 
-    void updateRectangle(); // TODO improve! how? -> x_, y_, w_, d_, h_, theta_  
+    void updateRectangle(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k); // TODO improve! how? -> x_, y_, w_, d_, h_, theta_   Kalman-Filter with constant size model
 
 };
+
+
 
 }
 

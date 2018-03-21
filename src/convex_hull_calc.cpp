@@ -506,8 +506,57 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
     this->pmf_.update ( featureProbabilities_in.pmf_ );
 }
 
-// For point associations to rectangle: https://stackoverflow.com/questions/5254838/calculating-distance-between-a-point-and-a-rectangular-box-nearest-point
-// For point associations to circle: https://math.stackexchange.com/questions/1429609/how-to-find-the-distance-from-a-point-outside-a-circle-to-any-point-on-a-circle
+void FeatureProperties::updateCircle(float Q_k, float R_k, float z_k) // z = observation
+{
+  float x_k_1_k_1 = circle_.get_R();
+  float x_k_k_1 = x_k_1_k_1; // Predicted state estimate. F = Identity.
+  
+  float y_k = z_k - x_k_k_1;// H = Identity
+  
+  float P_k_k_1 = circle_.get_P() + Q_k;
+  float S_k = P_k_k_1 + R_k;
+  float K_k = P_k_k_1/S_k;
+  float x_k_k = x_k_1_k_1 + K_k*y_k;
+  float P_k_k = (1 - K_k)*P_k_k_1;
+  
+  circle_.set_R(x_k_k);
+  circle_.set_P(P_k_k);
+
+}
+
+void FeatureProperties::updateRectangle(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k)
+{
+  //Eigen::VectorXd beta_hat1 ( 2 ), beta_hat2 ( 2 );
+  //    Eigen::MatrixXd m ( 2, 2 );
+    //Eigen::VectorXd y ( size );
+  
+  Eigen::MatrixXd F(2,2), H(2,2), I(2,2);
+  I.setIdentity(2,2);
+  F = I;
+  H = I;
+  
+  Eigen::VectorXd x_k_1_k_1(2);
+  x_k_1_k_1 << rectangle_.get_w(),rectangle_.get_d();
+
+ 
+  //Eigen::MatrixXd::Identity(2,2);
+  
+  //= circle_.get_R();
+  Eigen::VectorXd x_k_k_1 = F*x_k_1_k_1; // Predicted state estimate. F = Identity.
+  
+  Eigen::VectorXd y_k = z_k - H*x_k_k_1;// H = Identity
+  
+  Eigen::MatrixXd P_k_k_1 = rectangle_.get_P() + Q_k;
+  Eigen::MatrixXd S_k = H*P_k_k_1*H + R_k; // H = H transpose
+  Eigen::MatrixXd K_k = P_k_k_1*H*S_k.inverse();
+  Eigen::VectorXd x_k_k = x_k_1_k_1 + K_k*y_k;
+  Eigen::MatrixXd P_k_k = (I - K_k)*P_k_k_1;
+  
+  rectangle_.set_w(x_k_k(1) );
+  rectangle_.set_d(x_k_k(2) );
+
+  rectangle_.set_P(P_k_k );
+}
 
 
 }
