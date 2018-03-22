@@ -144,23 +144,36 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
         sum += error2;
     }
 
-    circle->setValues ( xc, yc, pose.getOrigin().getZ(),  R );
+    float roll = 0.0, pitch = 0.0, yaw = 0.0;
+    circle->setValues ( xc, yc, pose.getOrigin().getZ(),  R, roll, pitch, yaw);
     return sum/points.size();
 }
 
-void Circle::setValues ( float x, float y, float z, float R )
+Circle::Circle()
+{
+    float notANumber = 0.0/0.0;
+    this->setValues( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber  ); // Produces NaN values, meaning that the properties are not initialized yet
+}
+
+void Circle::setValues ( float x, float y, float z, float R, float roll, float pitch, float yaw )
 {
     x_ = x;
     y_ = y;
     z_ = z;
     R_ = R;
+    roll_ = roll;
+    pitch_ = pitch;
+    yaw_ = yaw;
 }
 
 void Circle::printValues ( )
 {
     std::cout << "x_ = " << x_;
     std::cout << " y_ = " << y_;
-    std::cout << " R_ = " << R_<< std::endl;
+    std::cout << " R_ = " << R_;
+    std::cout << " r_ = " << roll_;
+    std::cout << " p_ = " << pitch_;
+    std::cout << " y_ = " << yaw_<< std::endl;
 }
 
 void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
@@ -174,10 +187,11 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
     marker.pose.position.z = z_;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = 0.0;
-    marker.pose.orientation.w = 1.0;
+//     marker.pose.orientation.x = 0.0;
+//     marker.pose.orientation.y = 0.0;
+//     marker.pose.orientation.z = 0.0;
+//     marker.pose.orientation.w = 1.0;
+    marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll_, pitch_, yaw_ );
     marker.scale.x = 2*R_;
     marker.scale.y = 2*R_;
     marker.scale.z = 0.1;
@@ -187,6 +201,21 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.color.b = 0.0;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
+}
+
+std::vector< geo::Vec2f > Circle::convexHullPoints(unsigned int nPoints)
+{
+  std::vector< geo::Vec2f > Points(nPoints);
+  float deltaAngle = 2*M_PIl / nPoints;
+  
+  for(unsigned int ii = 0; ii < nPoints; ii++)
+  {
+    float angle = ii*deltaAngle;
+    Points[ii].x = x_ + R_*cos(angle);
+    Points[ii].y = y_ + R_*sin(angle);
+  }
+  
+  return Points;
 }
 
 float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int cornerIndex )
@@ -226,7 +255,8 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float center_x = 0.5* ( x_start1 + x_end ) + 0.5* ( x_end2-x_start2 );
     float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2-y_start2 );
 
-    rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, theta );
+    float roll = 0.0, pitch = 0.0, yaw = theta;
+    rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw );
 
     unsigned int low_size = cornerIndex;
     unsigned int high_size = points.size() - cornerIndex + 1;
@@ -401,12 +431,19 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
     float center_x = 0.5* ( x_start + x_end );
     float center_y = 0.5* ( y_start + y_end );
 
-    rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, theta );
+    float roll = 0.0, pitch = 0.0, yaw = theta;
+    rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, roll, pitch, yaw );
 
     return mean_error2;
 }
 
-void Rectangle::setValues ( float x, float y, float z, float w, float d, float h, float theta )
+Rectangle::Rectangle()
+{
+    float notANumber = 0.0/0.0;
+    this->setValues( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber ); // Produces NaN values, meaning that the properties are not initialized yet
+}
+
+void Rectangle::setValues ( float x, float y, float z, float w, float d, float h, float roll, float pitch, float yaw )
 {
     x_ = x;
     y_ = y;
@@ -414,23 +451,26 @@ void Rectangle::setValues ( float x, float y, float z, float w, float d, float h
     w_ = w;
     d_ = d;
     h_ = h;
-    theta_ = theta;
+    roll_ = roll;
+    pitch_ = pitch;
+    yaw_ = yaw;
 }
 
 void Rectangle::printValues ( )
 {
-    std::cout << "x_ = " << x_;
-    std::cout << " y_ = " << y_;
-    std::cout << " z_ = " << z_;
-    std::cout << " w_ = " << w_;
-    std::cout << " d_ = " << d_;
-    std::cout << " h_ = " << h_;
-    std::cout << " theta_ = " << theta_ << std::endl;
+    std::cout << "x_ = "      << x_;
+    std::cout << " y_ = "     << y_;
+    std::cout << " z_ = "     << z_;
+    std::cout << " w_ = "     << w_;
+    std::cout << " d_ = "     << d_;
+    std::cout << " h_ = "     << h_;
+    std::cout << " roll_ = "  << roll_;
+    std::cout << " pitch_ = " << pitch_;
+    std::cout << " yaw_ = "   << yaw_ << std::endl;
 }
 
 void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID )
 {
-    // How to incorporate the rotation? -> should follow from the lines
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time();
     marker.ns = "my_namespace";
@@ -440,7 +480,7 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID 
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
     marker.pose.position.z = z_;
-    marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( 0.0, 0.0, theta_ );
+    marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll_, pitch_, yaw_ );
     marker.scale.x = w_;
     marker.scale.y = d_;
     marker.scale.z = 0.1;
@@ -450,6 +490,29 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID 
     marker.color.b = 0.0;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
+}
+
+std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance )
+{
+
+    float dx = 0.5* ( w_ + associationDistance ); // blow up for associations
+    float dy = 0.5* ( d_ + associationDistance );
+
+    float ct = cos ( yaw_ );
+    float st = sin ( yaw_ );
+
+    geo::Vec2f originCorner ( x_ + ct*-dx + st* dy, y_ + st*-dx + ct*-dy ); // Rotation matrix
+    geo::Vec2f corner1 ( x_ + ct* dx + st* dy, y_ + st* dx + ct*-dy );
+    geo::Vec2f corner2 ( x_ + ct* dx - st* dy, y_ + st*-dx + ct* dy );
+    geo::Vec2f corner3 ( x_ + ct*-dx - st* dy, y_ + st*-dx + ct* dy );
+
+    std::vector< geo::Vec2f > corners;
+    corners.push_back ( originCorner );
+    corners.push_back ( corner1 );
+    corners.push_back ( corner2 );
+    corners.push_back ( corner3 );
+
+    return corners;
 }
 
 void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
@@ -506,7 +569,7 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
     this->pmf_.update ( featureProbabilities_in.pmf_ );
 }
 
-void FeatureProperties::updateCircle(float Q_k, float R_k, float z_k) // z = observation
+void FeatureProperties::updateCircleFeatures(float Q_k, float R_k, float z_k) // z = observation
 {
   float x_k_1_k_1 = circle_.get_R();
   float x_k_k_1 = x_k_1_k_1; // Predicted state estimate. F = Identity.
@@ -524,34 +587,38 @@ void FeatureProperties::updateCircle(float Q_k, float R_k, float z_k) // z = obs
 
 }
 
-void FeatureProperties::updateRectangle(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k)
-{
-  //Eigen::VectorXd beta_hat1 ( 2 ), beta_hat2 ( 2 );
-  //    Eigen::MatrixXd m ( 2, 2 );
-    //Eigen::VectorXd y ( size );
-  
+void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k)
+{ 
+  std::cout << "RectangleFeature update1" << std::endl;
   Eigen::MatrixXd F(2,2), H(2,2), I(2,2);
   I.setIdentity(2,2);
   F = I;
   H = I;
   
+  std::cout << "RectangleFeature update2" << std::endl;
+  
   Eigen::VectorXd x_k_1_k_1(2);
   x_k_1_k_1 << rectangle_.get_w(),rectangle_.get_d();
 
+  std::cout << "RectangleFeature update3" << std::endl;
  
   //Eigen::MatrixXd::Identity(2,2);
   
   //= circle_.get_R();
   Eigen::VectorXd x_k_k_1 = F*x_k_1_k_1; // Predicted state estimate. F = Identity.
-  
+  std::cout << "RectangleFeature update4" << std::endl;
   Eigen::VectorXd y_k = z_k - H*x_k_k_1;// H = Identity
-  
+  std::cout << "RectangleFeature update5" << std::endl;
   Eigen::MatrixXd P_k_k_1 = rectangle_.get_P() + Q_k;
+    std::cout << "RectangleFeature update5.1" << std::endl;
   Eigen::MatrixXd S_k = H*P_k_k_1*H + R_k; // H = H transpose
+    std::cout << "RectangleFeature update5.2" << std::endl;
   Eigen::MatrixXd K_k = P_k_k_1*H*S_k.inverse();
+    std::cout << "RectangleFeature update5.3" << std::endl;
   Eigen::VectorXd x_k_k = x_k_1_k_1 + K_k*y_k;
+    std::cout << "RectangleFeature update5.4" << std::endl;
   Eigen::MatrixXd P_k_k = (I - K_k)*P_k_k_1;
-  
+  std::cout << "RectangleFeature update6" << std::endl;
   rectangle_.set_w(x_k_k(1) );
   rectangle_.set_d(x_k_k(2) );
 
