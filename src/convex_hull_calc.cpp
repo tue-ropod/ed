@@ -171,9 +171,9 @@ void Circle::printValues ( )
     std::cout << "x_ = " << x_;
     std::cout << " y_ = " << y_;
     std::cout << " R_ = " << R_;
-    std::cout << " r_ = " << roll_;
-    std::cout << " p_ = " << pitch_;
-    std::cout << " y_ = " << yaw_<< std::endl;
+    std::cout << " roll_ = " << roll_;
+    std::cout << " pitch_ = " << pitch_;
+    std::cout << " yaw_ = " << yaw_<< std::endl;
 }
 
 void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
@@ -440,6 +440,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
 Rectangle::Rectangle()
 {
     float notANumber = 0.0/0.0;
+    P_.setIdentity(2,2); 
     this->setValues( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber ); // Produces NaN values, meaning that the properties are not initialized yet
 }
 
@@ -609,6 +610,8 @@ void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::Matr
   std::cout << "RectangleFeature update4" << std::endl;
   Eigen::VectorXd y_k = z_k - H*x_k_k_1;// H = Identity
   std::cout << "RectangleFeature update5" << std::endl;
+    std::cout << " rectangle_.get_P() = " << rectangle_.get_P() << std::endl;
+  std::cout << " Q_k = " << Q_k << std::endl;
   Eigen::MatrixXd P_k_k_1 = rectangle_.get_P() + Q_k;
     std::cout << "RectangleFeature update5.1" << std::endl;
   Eigen::MatrixXd S_k = H*P_k_k_1*H + R_k; // H = H transpose
@@ -619,10 +622,13 @@ void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::Matr
     std::cout << "RectangleFeature update5.4" << std::endl;
   Eigen::MatrixXd P_k_k = (I - K_k)*P_k_k_1;
   std::cout << "RectangleFeature update6" << std::endl;
-  rectangle_.set_w(x_k_k(1) );
-  rectangle_.set_d(x_k_k(2) );
+  rectangle_.set_w(x_k_k(0) );
+  std::cout << "RectangleFeature update6.1" << std::endl;
+  rectangle_.set_d(x_k_k(1) );
+  std::cout << "RectangleFeature update6.2" << std::endl;
 
   rectangle_.set_P(P_k_k );
+  std::cout << "RectangleFeature update6.3" << std::endl;
 }
 
 
