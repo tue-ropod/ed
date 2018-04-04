@@ -590,45 +590,45 @@ void FeatureProperties::updateCircleFeatures(float Q_k, float R_k, float z_k) //
 
 void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k)
 { 
-  std::cout << "RectangleFeature update1" << std::endl;
+//   std::cout << "RectangleFeature update1" << std::endl;
   Eigen::MatrixXd F(2,2), H(2,2), I(2,2);
   I.setIdentity(2,2);
   F = I;
   H = I;
   
-  std::cout << "RectangleFeature update2" << std::endl;
+//   std::cout << "RectangleFeature update2" << std::endl;
   
   Eigen::VectorXd x_k_1_k_1(2);
   x_k_1_k_1 << rectangle_.get_w(),rectangle_.get_d();
 
-  std::cout << "RectangleFeature update3" << std::endl;
+//   std::cout << "RectangleFeature update3" << std::endl;
  
   //Eigen::MatrixXd::Identity(2,2);
   
   //= circle_.get_R();
   Eigen::VectorXd x_k_k_1 = F*x_k_1_k_1; // Predicted state estimate. F = Identity.
-  std::cout << "RectangleFeature update4" << std::endl;
+//   std::cout << "RectangleFeature update4" << std::endl;
   Eigen::VectorXd y_k = z_k - H*x_k_k_1;// H = Identity
-  std::cout << "RectangleFeature update5" << std::endl;
-    std::cout << " rectangle_.get_P() = " << rectangle_.get_P() << std::endl;
-  std::cout << " Q_k = " << Q_k << std::endl;
+//   std::cout << "RectangleFeature update5" << std::endl;
+//     std::cout << " rectangle_.get_P() = " << rectangle_.get_P() << std::endl;
+//   std::cout << " Q_k = " << Q_k << std::endl;
   Eigen::MatrixXd P_k_k_1 = rectangle_.get_P() + Q_k;
-    std::cout << "RectangleFeature update5.1" << std::endl;
+//     std::cout << "RectangleFeature update5.1" << std::endl;
   Eigen::MatrixXd S_k = H*P_k_k_1*H + R_k; // H = H transpose
-    std::cout << "RectangleFeature update5.2" << std::endl;
+//     std::cout << "RectangleFeature update5.2" << std::endl;
   Eigen::MatrixXd K_k = P_k_k_1*H*S_k.inverse();
-    std::cout << "RectangleFeature update5.3" << std::endl;
+//     std::cout << "RectangleFeature update5.3" << std::endl;
   Eigen::VectorXd x_k_k = x_k_1_k_1 + K_k*y_k;
-    std::cout << "RectangleFeature update5.4" << std::endl;
+//     std::cout << "RectangleFeature update5.4" << std::endl;
   Eigen::MatrixXd P_k_k = (I - K_k)*P_k_k_1;
-  std::cout << "RectangleFeature update6" << std::endl;
+//   std::cout << "RectangleFeature update6" << std::endl;
   rectangle_.set_w(x_k_k(0) );
-  std::cout << "RectangleFeature update6.1" << std::endl;
+//   std::cout << "RectangleFeature update6.1" << std::endl;
   rectangle_.set_d(x_k_k(1) );
-  std::cout << "RectangleFeature update6.2" << std::endl;
+//   std::cout << "RectangleFeature update6.2" << std::endl;
 
   rectangle_.set_P(P_k_k );
-  std::cout << "RectangleFeature update6.3" << std::endl;
+//   std::cout << "RectangleFeature update6.3" << std::endl;
 }
 
 

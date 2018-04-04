@@ -51,11 +51,12 @@ public:
 
 class Circle
 {
+  public:
+    
     float x_, y_, z_, R_, roll_, pitch_, yaw_; // x, y, z-positions, radius, roll, pitch, yaw
     
     float P_; // estimated covariance of the kalman filter to describe the radius
 
-public:
     Circle();
     
     void setValues ( float x, float y, float z, float R, float roll, float pitch, float yaw );
@@ -103,11 +104,11 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce,
 
 class Rectangle
 {
+  public:
     float x_, y_, z_, w_, d_, h_, roll_, pitch_, yaw_; // x, y of center, width, height and rotation of rectangle
     
     Eigen::MatrixXd P_;
 
-public:
     Rectangle();
       
     void setValues ( float x, float y, float z, float w, float d, float h, float roll, float pitch, float yaw );
@@ -166,9 +167,9 @@ geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const
 // Probabilities
 class FeatureProbabilities
 {
+  public:
     pbl::PMF pmf_;
 
-public:
     FeatureProbabilities ( float pRectangle_in = 0.5, float pCircle_in = 0.5 ) { // Initialize with 50/50 probabilities
         pmf_.setDomainSize ( 2 );
         pmf_.setProbability ( "Rectangle", pRectangle_in );
@@ -197,13 +198,13 @@ public:
 
 class FeatureProperties
 {
+  public:
     FeatureProbabilities featureProbabilities_; // Probabilities of the features. Is there a need to reset these when there is a switch? Or only when the probability of a feature was low?
 
     Circle circle_;
 
     Rectangle rectangle_;
 
-public:
     FeatureProperties ( float pRectangle_in = 0.5, float pCircle_in = 0.5 ) { // Initialize with 50/50 probabilities unless otherwise indicated
         featureProbabilities_.setProbabilities ( pRectangle_in, pCircle_in );
     };

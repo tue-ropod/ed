@@ -79,7 +79,7 @@ public:
     {
         if (!has_pose_)
 	{
-	  std::cout << "warning" << std::endl;
+// 	  std::cout << "warning" << std::endl;
             log::warning() << "Someone's accessing an entity's pose while it doesnt have one." << std::endl;
 	}
         return pose_;
@@ -132,11 +132,11 @@ public:
     template<typename T>
     const T* property(const PropertyKey<T>& key) const
     {
-      std::cout << "Key = " << key.idx << std::endl;
+//       std::cout << "Key = " << key.idx << std::endl;
         std::map<Idx, Property>::const_iterator it = properties_.find(key.idx);
         if (it == properties_.end())
 	{
-            std::cout << "Entity not found" << std::endl; return 0;
+//             std::cout << "Entity not found" << std::endl; return 0;
 	}
 
         const Property& p = it->second;
@@ -147,9 +147,10 @@ public:
         }
         catch (std::bad_cast& e)
         {
-            std::cout << "Entity Problem" << std::endl; return 0;
+//             std::cout << "Entity Problem" << std::endl; 
+	    return 0;
         }
-        std::cout << "Key2 = " << key.idx << std::endl;
+//         std::cout << "Key2 = " << key.idx << std::endl;
     }
 
 //    template<typename T>
@@ -220,10 +221,10 @@ public:
     void printFlags() const {
       int counter = 1;
       
-      std::cout << "Flags will be printed now for entity " << id_ << std::endl;
+      //std::cout << "Flags will be printed now for entity " << id_ << std::endl;
       
       for(std::set<std::string>::iterator it = flags_.begin(); it != flags_.end(); ++it ) {
-	  std::cout << "Flag" << counter << " = " << *it << std::endl;
+	//  std::cout << "Flag" << counter << " = " << *it << std::endl;
 	  counter++;
       }
       
