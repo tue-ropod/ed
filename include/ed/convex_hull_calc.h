@@ -22,7 +22,7 @@ namespace tracking
 {
 
 // TODO: make many of variables below configurable/tunable in ED model descriptions?
-#define TIMEOUT_TIME 1.0 // [s]
+#define TIMEOUT_TIME 0.1 // [s]
 #define MAX_LINE_ERROR 0.05 // [m]  
 #define MIN_DISTANCE_CORNER_DETECTION 0.05 // [m]
 #define MIN_POINTS_LINEFIT 5 // [-]
@@ -81,6 +81,8 @@ class Circle
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
     
+    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color );
+    
     geo::Pose3D getPose() {geo::Pose3D pose(x_, y_, z_, roll_, pitch_,yaw_); return pose; };
     
     std::vector< geo::Vec2f > convexHullPoints(unsigned int nPoints);
@@ -137,6 +139,8 @@ class Rectangle
     void set_yaw   ( float yaw )         { yaw_   = yaw; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
+    
+    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color );
     
     std::vector<geo::Vec2f> determineCorners( float associationDistance);
 

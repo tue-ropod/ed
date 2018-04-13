@@ -178,6 +178,17 @@ void Circle::printValues ( )
 
 void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
 {
+   std_msgs::ColorRGBA color;
+   color.a = 0.5;
+   color.r = 0.0;
+   color.g = 1.0;
+   color.b = 0.0;
+   
+   this->setMarker ( marker, ID, color ); 
+}
+
+void Circle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color )
+{
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time();
     marker.ns = "my_namespace";
@@ -195,10 +206,8 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
     marker.scale.x = 2*R_;
     marker.scale.y = 2*R_;
     marker.scale.z = 0.1;
-    marker.color.a = 0.5;
-    marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
+    
+    marker.color = color;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
@@ -380,7 +389,7 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     Eigen::MatrixXd m ( size, 2 );
     Eigen::VectorXd y ( size );
     unsigned int counter = 0;
-
+    
     for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) {
         geo::Vec2f point = *it;
         m ( counter, 0 ) = ( double ) 1.0;
@@ -470,7 +479,7 @@ void Rectangle::printValues ( )
     std::cout << " yaw_ = "   << yaw_ << std::endl;
 }
 
-void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID )
+void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color )
 {
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time();
@@ -485,12 +494,20 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID 
     marker.scale.x = w_;
     marker.scale.y = d_;
     marker.scale.z = 0.1;
-    marker.color.a = 0.5;
-    marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
+    marker.color = color;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
+}
+
+void Rectangle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
+{
+   std_msgs::ColorRGBA color;
+   color.a = 0.5;
+   color.r = 0.0;
+   color.g = 1.0;
+   color.b = 0.0;
+   
+   this->setMarker ( marker, ID, color ); 
 }
 
 std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance )
@@ -503,9 +520,9 @@ std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance 
     float st = sin ( yaw_ );
 
     geo::Vec2f originCorner ( x_ + ct*-dx + st* dy, y_ + st*-dx + ct*-dy ); // Rotation matrix
-    geo::Vec2f corner1 ( x_ + ct* dx + st* dy, y_ + st* dx + ct*-dy );
-    geo::Vec2f corner2 ( x_ + ct* dx - st* dy, y_ + st*-dx + ct* dy );
-    geo::Vec2f corner3 ( x_ + ct*-dx - st* dy, y_ + st*-dx + ct* dy );
+    geo::Vec2f corner1 (      x_ + ct* dx + st* dy, y_ + st* dx + ct*-dy );
+    geo::Vec2f corner2 (      x_ + ct* dx - st* dy, y_ + st* dx + ct* dy );
+    geo::Vec2f corner3 (      x_ + ct*-dx - st* dy, y_ + st*-dx + ct* dy );
 
     std::vector< geo::Vec2f > corners;
     corners.push_back ( originCorner );
