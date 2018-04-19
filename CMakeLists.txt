@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   tue_serialization
   message_generation
   tue_config
+  problib
 )
 
 find_package(PCL REQUIRED)
@@ -62,7 +63,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ed_core ed_io
-  CATKIN_DEPENDS tue_config tue_serialization rgbd ed_object_models
+  CATKIN_DEPENDS tue_config tue_serialization rgbd ed_object_models problib
   # DEPENDS system_lib
 )
 
