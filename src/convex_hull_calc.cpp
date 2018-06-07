@@ -16,7 +16,7 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
     *it_low = points.begin();
     *it_high = points.end();
 
-    bool includeCorner = ( *cornerIndex > 0 ); // cornerIndex is not NaN
+    bool includeCorner = *cornerIndex > 0;
 
     // In the case of including a corner, check if both segments have enough points to describe a line with. If not, do not use these data.
     if ( includeCorner ) {
@@ -55,7 +55,7 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
     return NONE;
 }
 
-float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
+float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
 {
     switch ( FITTINGMETHOD ) {
     case NONE: {
@@ -65,10 +65,10 @@ float fitObject ( std::vector<geo::Vec2f>& points, geo::Pose3D& pose, int FITTIN
         return setRectangularParametersForLine ( points,  it_low,  it_high, rectangle, sensor_pose );
     }
     case CIRCLE: {
-        return fitCircle ( points, circle, pose );
+        return fitCircle ( points, circle, sensor_pose );
     }
     case RECTANGLE: {
-        return fitRectangle ( points, rectangle, pose , *cornerIndex );
+        return fitRectangle ( points, rectangle, sensor_pose , *cornerIndex );
     }
     }
     return false; // end reached without doing something
@@ -93,7 +93,7 @@ geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const
 }
 
 //Fast Line, Arc/Circle and Leg Detection from Laser Scan Data in a Player Driver: http://miarn.sourceforge.net/pdf/a1738b.pdf
-float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle, geo::Pose3D& pose )
+float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle, const geo::Pose3D& pose )
 {
     // according to https://dtcenter.org/met/users/docs/write_ups/circle_fit.pdf
     float x_avg = 0.0, y_avg = 0.0;
@@ -145,7 +145,7 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
     }
 
     float roll = 0.0, pitch = 0.0, yaw = 0.0;
-    circle->setValues ( xc, yc, pose.getOrigin().getZ(),  R, roll, pitch, yaw);
+    circle->setValues ( xc, yc, pose.getOrigin().getZ(),  R, roll, pitch, yaw); // Assumption: object-height identical to sensor-height
     return sum/points.size();
 }
 
@@ -227,7 +227,7 @@ std::vector< geo::Vec2f > Circle::convexHullPoints(unsigned int nPoints)
   return Points;
 }
 
-float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, geo::Pose3D& pose , unsigned int cornerIndex )
+float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, const geo::Pose3D& pose , unsigned int cornerIndex )
 {
     std::vector<geo::Vec2f>::iterator it_start = points.begin();
     std::vector<geo::Vec2f>::iterator it_split = points.begin() + cornerIndex;
@@ -265,7 +265,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2-y_start2 );
 
     float roll = 0.0, pitch = 0.0, yaw = theta;
-    rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw );
+    rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
     unsigned int low_size = cornerIndex;
     unsigned int high_size = points.size() - cornerIndex + 1;
@@ -441,7 +441,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
     float center_y = 0.5* ( y_start + y_end );
 
     float roll = 0.0, pitch = 0.0, yaw = theta;
-    rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, roll, pitch, yaw );
+    rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
     return mean_error2;
 }
