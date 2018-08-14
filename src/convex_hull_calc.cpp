@@ -57,17 +57,22 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
 
 float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
 {
-    switch ( FITTINGMETHOD ) {
-    case NONE: {
+    switch ( FITTINGMETHOD )
+    {
+    case NONE:
+    {
         return std::numeric_limits<float>::infinity();
     }
-    case LINE: {
+    case LINE:
+    {
         return setRectangularParametersForLine ( points,  it_low,  it_high, rectangle, sensor_pose );
     }
-    case CIRCLE: {
+    case CIRCLE:
+    {
         return fitCircle ( points, circle, sensor_pose );
     }
-    case RECTANGLE: {
+    case RECTANGLE:
+    {
         return fitRectangle ( points, rectangle, sensor_pose , *cornerIndex );
     }
     }
@@ -190,8 +195,8 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
 void Circle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color )
 {
     marker.header.frame_id = "/map";
-    marker.header.stamp = ros::Time();
-    marker.ns = "my_namespace";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "default namespace";
     marker.id = ID;
     marker.type = visualization_msgs::Marker::CYLINDER;
     marker.action = visualization_msgs::Marker::ADD;
@@ -479,11 +484,11 @@ void Rectangle::printValues ( )
     std::cout << " yaw_ = "   << yaw_ << std::endl;
 }
 
-void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color )
+void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color, std::string ns )
 {
     marker.header.frame_id = "/map";
-    marker.header.stamp = ros::Time();
-    marker.ns = "my_namespace";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = ns;
     marker.id = ID;
     marker.type = visualization_msgs::Marker::CUBE;
     marker.action = visualization_msgs::Marker::ADD;
@@ -508,6 +513,11 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID
    color.b = 0.0;
    
    this->setMarker ( marker, ID, color ); 
+}
+
+void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color)
+{
+        this->setMarker ( marker, ID, color, "default namespace" ); 
 }
 
 std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance )

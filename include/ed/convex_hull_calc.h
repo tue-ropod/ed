@@ -2,6 +2,7 @@
 #define ED_CONVEX_HULL_CALC_H_
 
 #include "ed/convex_hull.h"
+#include "ros/ros.h" // used for the msg timestamps, need to be removed if markers are not communicated via ros anymore TODO
 #include <visualization_msgs/Marker.h>
 #include <math.h>
 #include <numeric>
@@ -140,7 +141,9 @@ class Rectangle
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
     
-    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color );
+    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color);
+    
+    void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color, std::string ns );
     
     std::vector<geo::Vec2f> determineCorners( float associationDistance);
 
