@@ -140,11 +140,12 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
     float yc = vc+y_avg;
 
     float alpha = uc*uc+vc*vc+ ( Suu+Svv ) /points.size();
-    float R = std::sqrt ( alpha );
-
+    Eigen::MatrixXd R(1,1);
+    R(1,1) = std::sqrt ( alpha );
+     
     float sum = 0.0;
     for ( unsigned int i = 0; i < points.size(); ++i ) {
-        float error = fabs ( sqrt ( pow ( xc - points[i].x, 2.0 ) + pow ( yc - points[i].y, 2.0 ) ) - R ); // distance between a point and a circle;
+        float error = fabs ( sqrt ( pow ( xc - points[i].x, 2.0 ) + pow ( yc - points[i].y, 2.0 ) ) - R(1,1) ); // distance between a point and a circle;
         float error2 = pow ( error, 2.0 );
         sum += error2;
     }
@@ -157,10 +158,12 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
 Circle::Circle()
 {
     float notANumber = 0.0/0.0;
-    this->setValues( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber  ); // Produces NaN values, meaning that the properties are not initialized yet
+    Eigen::MatrixXd R(1,1);
+    R(1,1) = notANumber;
+    this->setValues( notANumber, notANumber, notANumber, R, notANumber, notANumber, notANumber  ); // Produces NaN values, meaning that the properties are not initialized yet
 }
 
-void Circle::setValues ( float x, float y, float z, float R, float roll, float pitch, float yaw )
+void Circle::setValues ( float x, float y, float z, Eigen::MatrixXd R, float roll, float pitch, float yaw )
 {
     x_ = x;
     y_ = y;
@@ -208,8 +211,8 @@ void Circle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, st
 //     marker.pose.orientation.z = 0.0;
 //     marker.pose.orientation.w = 1.0;
     marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll_, pitch_, yaw_ );
-    marker.scale.x = 2*R_;
-    marker.scale.y = 2*R_;
+    marker.scale.x = 2*R_(1,1);
+    marker.scale.y = 2*R_(1,1);
     marker.scale.z = 0.1;
     
     marker.color = color;
@@ -225,8 +228,8 @@ std::vector< geo::Vec2f > Circle::convexHullPoints(unsigned int nPoints)
   for(unsigned int ii = 0; ii < nPoints; ii++)
   {
     float angle = ii*deltaAngle;
-    Points[ii].x = x_ + R_*cos(angle);
-    Points[ii].y = y_ + R_*sin(angle);
+    Points[ii].x = x_ + R_(1,1)*cos(angle);
+    Points[ii].y = y_ + R_(1,1)*sin(angle);
   }
   
   return Points;
@@ -597,18 +600,21 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
     this->pmf_.update ( featureProbabilities_in.pmf_ );
 }
 
-void FeatureProperties::updateCircleFeatures(float Q_k, float R_k, float z_k) // z = observation
+void FeatureProperties::updateCircleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k) // z = observation
 {
-  float x_k_1_k_1 = circle_.get_R();
-  float x_k_k_1 = x_k_1_k_1; // Predicted state estimate. F = Identity.
+  Eigen::MatrixXd x_k_1_k_1 = circle_.get_R();
+  Eigen::MatrixXd x_k_k_1 = x_k_1_k_1; // Predicted state estimate. F = Identity.
   
-  float y_k = z_k - x_k_k_1;// H = Identity
   
-  float P_k_k_1 = circle_.get_P() + Q_k;
-  float S_k = P_k_k_1 + R_k;
-  float K_k = P_k_k_1/S_k;
-  float x_k_k = x_k_1_k_1 + K_k*y_k;
-  float P_k_k = (1 - K_k)*P_k_k_1;
+  Eigen::MatrixXd y_k = z_k - x_k_k_1;// H = Identity
+  
+  Eigen::MatrixXd P_k_k_1 = circle_.get_P() + Q_k;
+  Eigen::MatrixXd S_k = P_k_k_1 + R_k;
+  Eigen::MatrixXd K_k = P_k_k_1*S_k.inverse();
+  Eigen::MatrixXd x_k_k = x_k_1_k_1 + K_k*y_k;
+  Eigen::MatrixXd Identity;
+  Identity.setIdentity(K_k.rows(), K_k.cols()); ;
+  Eigen::MatrixXd P_k_k = (Identity - K_k)*P_k_k_1;
   
   circle_.set_R(x_k_k);
   circle_.set_P(P_k_k);
