@@ -54,42 +54,34 @@ public:
 
 class Circle
 {
+    float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_, radius_; // x, y, z-positions, roll, pitch, yaw and radius of circle
+    Eigen::MatrixXd P_; // estimated covariance for state = [x, y, xVel, yVel, radius]^T
+    
   public:
-    
-    float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_; // x, y, z-positions, radius, roll, pitch, yaw
-    
-    Eigen::MatrixXd P_;
-    float PSize_; // estimated covariance of the kalman filter to describe the radius
-    Eigen::MatrixXd PPosition_;
-    Eigen::MatrixXd R_;
-    
     Circle();
     
-    void setValues ( float x, float y, float z, Eigen::MatrixXd R, float roll, float pitch, float yaw );
+    void setProperties ( float x, float y, float z, float roll, float pitch, float yaw, float radius );
     
     float get_x()                             { return x_; } ;
     float get_y()                             { return y_; } ;
     float get_z()                             { return z_; } ;
-    Eigen::MatrixXd get_R()                   { return R_; } ;
-    float get_PSize_()                        { return PSize_; } ;
-    Eigen::MatrixXd get_PPosition()           { return PPosition_; } ;
-    Eigen::MatrixXd get_P()                   { return P_; } ;
     float get_roll()                          { return roll_; } ;
     float get_pitch()                         { return pitch_; } ;
     float get_yaw()                           { return yaw_; } ;
     float get_xVel()                          { return xVel_; } ;
     float get_yVel()                          { return yVel_; } ;
+    float get_radius()                        { return radius_; } ;
+    Eigen::MatrixXd get_P()             { return P_; } ;
     
     void set_x          ( float x )           { x_     = x; } ;
     void set_y          ( float y )           { y_     = y; } ;
     void set_z          ( float z )           { z_     = z; } ;
-    void set_R          ( Eigen::MatrixXd R ) { R_     = R; } ;
-    void set_PSize      ( float P )           { PSize_ = P; } ;
     void set_roll       ( float roll )        { roll_  = roll; } ;
     void set_pitch      ( float pitch )       { pitch_ = pitch; } ;
     void set_yaw        ( float yaw )         { yaw_   = yaw; } ;
     void set_xVel       ( float xVel )        { xVel_  = xVel; } ;
     void set_yVel       ( float yVel )        { yVel_  = yVel; } ;
+    void set_radius     ( float radius )      { radius_ = radius; } ;
     void set_P          ( Eigen::MatrixXd P ) { P_ = P; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
@@ -100,7 +92,7 @@ class Circle
     
     std::vector< geo::Vec2f > convexHullPoints(unsigned int nPoints);
 
-    void printValues();
+    void printProperties();
 };
 
 struct greater
@@ -119,15 +111,11 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce,
 
 class Rectangle
 {
+        float x_, y_, z_, w_, d_, h_, roll_, pitch_, yaw_, xVel_, yVel_, yawVel_; // x, y of center, width, height and rotation of rectangle
+        Eigen::MatrixXd P_;
   public:
-    float x_, y_, z_, w_, d_, h_, roll_, pitch_, yaw_, xVel_, yVel_, yawVel_; // x, y of center, width, height and rotation of rectangle
-    
-    Eigen::MatrixXd PSize_;
-    Eigen::MatrixXd PPosition_;
-    Eigen::MatrixXd P_;
-
     Rectangle();
-      
+    
     void setValues ( float x, float y, float z, float w, float d, float h, float roll, float pitch, float yaw );
     
     float get_x()                       { return x_; } ;
@@ -135,33 +123,31 @@ class Rectangle
     float get_z()                       { return z_; } ;
     float get_w()                       { return w_; } ;
     float get_d()                       { return d_; } ;
+    float get_h()                       { return h_; } ;
     float get_roll()                    { return roll_; } ;
     float get_pitch()                   { return pitch_; } ;
     float get_yaw()                     { return yaw_; } ;
-    float get_theta()                   { return yaw_; }
+//     float get_theta()                   { return yaw_; }
     float get_xVel()                    { return xVel_; } ;
     float get_yVel()                    { return yVel_; } ;
     float get_yawVel()                  { return yawVel_; } ;
     Eigen::MatrixXd get_P()             { return P_; } ;
-    Eigen::MatrixXd get_PSize()         { return PSize_; } ;
-    Eigen::MatrixXd get_PPosition()     { return PPosition_; } ;
     
     geo::Pose3D getPose() {geo::Pose3D pose(x_, y_, z_, roll_, pitch_,yaw_); return pose; };
     
-    void set_x          ( float x )             { x_ = x; } ;
-    void set_y          ( float y )             { y_ = y; } ;
-    void set_z          ( float z )             { z_ = z; } ;
-    void set_w          ( float w )             { w_ = w; } ;
-    void set_d          ( float d )             { d_ = d; } ;
-    void set_P          ( Eigen::MatrixXd P )   { P_ = P; } ;
-    void set_PSize      ( Eigen::MatrixXd P )   { PSize_ = P; } ;
-    void set_PPosition  ( Eigen::MatrixXd P )   { PPosition_ = P; } ;
+    void set_x          ( float x )             { x_     = x; } ;
+    void set_y          ( float y )             { y_     = y; } ;
+    void set_z          ( float z )             { z_     = z; } ;
+    void set_w          ( float w )             { w_     = w; } ;
+    void set_d          ( float d )             { d_     = d; } ;
+    void set_h          ( float h )             { h_     = h; } ;
     void set_roll       ( float roll )          { roll_  = roll; } ;
     void set_pitch      ( float pitch )         { pitch_ = pitch; } ;
     void set_yaw        ( float yaw )           { yaw_   = yaw; } ;
     void set_xVel       ( float xVel )          { xVel_  = xVel; } ;
     void set_yVel       ( float yVel )          { yVel_  = yVel; } ;
     void set_yawVel     ( float yawVel )        { yVel_  = yawVel; } ;
+    void set_P          ( Eigen::MatrixXd P )   { P_     = P; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
     
@@ -284,9 +270,9 @@ class FeatureProperties
     
     void updatePosition();
     
-    void updateCircleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k);
+    void updateCircleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt);
     
-    void updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k);
+    void updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k, float dt);
 
 };
 

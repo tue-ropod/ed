@@ -22,25 +22,25 @@ public:
         w.writeValue ( "class_data", serializedData );
         w.endGroup();
 
-        w.writeGroup ( "circ" );
-        w.writeValue ( "x",     p.circle_.x_ );
-        w.writeValue ( "y",     p.circle_.y_ );
-        w.writeValue ( "z",     p.circle_.z_ );
-        w.writeValue ( "roll",  p.circle_.roll_ );
-        w.writeValue ( "pitch", p.circle_.pitch_ );
-        w.writeValue ( "yaw",   p.circle_.yaw_ );
+        w.writeGroup ( "circ" );        
+        w.writeValue ( "x",     p.getCircle().get_x()  );
+        w.writeValue ( "y",     p.getCircle().get_y() );
+        w.writeValue ( "z",     p.getCircle().get_z() );
+        w.writeValue ( "roll",  p.getCircle().get_roll() );
+        w.writeValue ( "pitch", p.getCircle().get_pitch() );
+        w.writeValue ( "yaw",   p.getCircle().get_yaw() );
         w.endGroup();
 
         w.writeGroup ( "rec" );
-        w.writeValue ( "x",     p.rectangle_.x_ );
-        w.writeValue ( "y",     p.rectangle_.y_ );
-        w.writeValue ( "z",     p.rectangle_.z_ );
-        w.writeValue ( "w",     p.rectangle_.w_ );
-        w.writeValue ( "d",     p.rectangle_.d_ );
-        w.writeValue ( "h",     p.rectangle_.h_ );
-        w.writeValue ( "roll",  p.rectangle_.roll_ );
-        w.writeValue ( "pitch", p.rectangle_.pitch_ );
-        w.writeValue ( "yaw",   p.rectangle_.yaw_ );
+        w.writeValue ( "x",     p.getRectangle().get_x() );
+        w.writeValue ( "y",     p.getRectangle().get_y() );
+        w.writeValue ( "z",     p.getRectangle().get_z() );
+        w.writeValue ( "w",     p.getRectangle().get_w() );
+        w.writeValue ( "d",     p.getRectangle().get_d() );
+        w.writeValue ( "h",     p.getRectangle().get_h() );
+        w.writeValue ( "roll",  p.getRectangle().get_roll() );
+        w.writeValue ( "pitch", p.getRectangle().get_pitch() );
+        w.writeValue ( "yaw",   p.getRectangle().get_yaw() );
         w.endGroup();
     }
 
@@ -55,32 +55,50 @@ public:
           r.readValue("class_data", serializedData);
         }
         p.featureProbabilities_.pmf_.deserialize( serializedData );
-        
-	
-
+       
+        float x, y, z, w, d, h, roll, pitch, yaw;
         if ( r.readGroup ( "circ" ) ) 
-        {
-            r.readValue ( "x",     p.circle_.x_ );
-            r.readValue ( "y",     p.circle_.y_ );
-            r.readValue ( "z",     p.circle_.z_ );
-            r.readValue ( "roll",  p.circle_.roll_ );
-            r.readValue ( "pitch", p.circle_.pitch_ );
-            r.readValue ( "yaw",   p.circle_.yaw_ );
-            r.endGroup();
+        {       
+                r.readValue ( "x",     x );
+                r.readValue ( "y",     y );
+                r.readValue ( "z",     z );
+                r.readValue ( "roll",  roll );
+                r.readValue ( "pitch", pitch );
+                r.readValue ( "yaw",   yaw );
+            
+                p.circle_.set_x(x);
+                p.circle_.set_y(y);
+                p.circle_.set_z(z);
+                p.circle_.set_roll(roll);
+                p.circle_.set_pitch(pitch);
+                p.circle_.set_yaw(yaw);
+            
+                r.endGroup();
         }
 
         if ( r.readGroup ( "rec" ) ) 
         {
-            r.readValue ( "x",     p.rectangle_.x_ );
-            r.readValue ( "y",     p.rectangle_.y_ );
-            r.readValue ( "z",     p.rectangle_.z_ );
-            r.readValue ( "w",     p.rectangle_.w_ );
-            r.readValue ( "d",     p.rectangle_.d_ );
-            r.readValue ( "h",     p.rectangle_.h_ );
-            r.readValue ( "roll",  p.rectangle_.roll_ );
-            r.readValue ( "pitch", p.rectangle_.pitch_ );
-            r.readValue ( "yaw",   p.rectangle_.yaw_ );
-            r.endGroup();
+                r.readValue ( "x",     x );
+                r.readValue ( "y",     y );
+                r.readValue ( "z",     z );
+                r.readValue ( "w",     w );
+                r.readValue ( "d",     d );
+                r.readValue ( "h",     roll );
+                r.readValue ( "roll",  pitch );
+                r.readValue ( "pitch", yaw );
+            
+                r.readValue ( "yaw",   yaw );
+                r.endGroup();
+                
+                p.rectangle_.set_x(x);
+                p.rectangle_.set_y(y);
+                p.rectangle_.set_z(z);
+                p.rectangle_.set_w(w);
+                p.rectangle_.set_d(d);
+                p.rectangle_.set_h(h);
+                p.rectangle_.set_roll(roll);
+                p.rectangle_.set_pitch(pitch);
+                p.rectangle_.set_yaw(yaw);         
         }
 
         v = p;
