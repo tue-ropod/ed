@@ -21,7 +21,7 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
     // In the case of including a corner, check if both segments have enough points to describe a line with. If not, do not use these data.
     if ( includeCorner ) {
         unsigned int nPointsLow = *cornerIndex + 1; // + 1 because the corner can be used for both lines
-        unsigned int nPointsHigh = points.size() - nPointsLow + 1; // +1 because the point with max error is considered as the corner point and belongs to both lines
+        unsigned int nPointsHigh = points.size() - *cornerIndex;
         unsigned int remainingSize = points.size();
 
         bool fitSingleline = false;
@@ -29,15 +29,15 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
 
         if ( nPointsLow < MIN_POINTS_LINEFIT ) { // Part of section too smal -> remove it from the data which are analyzed and try to fit line again
             *it_low += *cornerIndex;
-            remainingSize -= ( nPointsLow - 1 );
+            remainingSize = nPointsHigh;
             pointsRemoved = true;
         }
         
         if ( nPointsHigh < MIN_POINTS_LINEFIT ) {
-            *it_high -= *cornerIndex;
-            remainingSize -= ( nPointsHigh - 1 );
+            *it_high -= nPointsHigh;
+            remainingSize = nPointsLow;
             pointsRemoved = true;
-        }
+        }       
 
         if ( pointsRemoved && remainingSize < MIN_POINTS_LINEFIT ) {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
@@ -216,9 +216,6 @@ void Circle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, st
     marker.color = color;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
-    
-    std::cout << "Circle marker set with properties " << std::endl;
-    this->printProperties();
 }
 
 std::vector< geo::Vec2f > Circle::convexHullPoints(unsigned int nPoints)
@@ -270,14 +267,15 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     dy = y_start2 - y_end2;
     float depth = sqrt ( dx*dx+dy*dy );
 
-    float center_x = 0.5* ( x_start1 + x_end ) + 0.5* ( x_end2-x_start2 );
-    float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2-y_start2 );
-
+    float center_x = 0.5* ( x_start1 + x_end ) + 0.5* ( x_end2 - x_start2 );
+    float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2 - y_start2 );
+    
     float roll = 0.0, pitch = 0.0, yaw = theta;
     rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
     unsigned int low_size = cornerIndex;
     unsigned int high_size = points.size() - cornerIndex + 1;
+    
     return ( mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ); // average of error
 }
 
@@ -394,12 +392,18 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
 
-    unsigned int size = std::distance ( *it_start, *it_end );;
+    unsigned int size = std::distance ( *it_start, *it_end );
     Eigen::MatrixXd m ( size, 2 );
     Eigen::VectorXd y ( size );
     unsigned int counter = 0;
     
-    for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) {
+    std::vector<geo::Vec2f>::iterator it = *it_start;
+    geo::Vec2f point_start = *it;
+    it = *it_end; it--;
+    geo::Vec2f point_end = *it;
+    
+    for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) 
+    {
         geo::Vec2f point = *it;
         m ( counter, 0 ) = ( double ) 1.0;
         m ( counter, 1 ) = ( double ) point.x;
@@ -415,7 +419,8 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
     float error, sum = 0.0;
 
     counter = 0;
-    for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) {
+    for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) 
+    {
         // Distance of each point to line
         geo::Vec2f point = *it;
         error = fabs ( -beta_hat ( 1 ) * point.x+point.y - beta_hat ( 0 ) ) /sqrt ( beta_hat ( 1 ) *beta_hat ( 1 ) + 1 ); // distance of a point to a line, see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
@@ -435,6 +440,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
     float theta = atan2 ( beta_hat ( 1 ), 1 );
 
     unsigned int ii_start = std::distance ( points.begin(), *it_low );
+    
     float x_start = points[ii_start].x;
     float y_start = points[ii_start].y; // better to rely on the original points: extreme outliers are already filtered out due to segmentation
 
