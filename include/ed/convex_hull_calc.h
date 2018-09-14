@@ -71,7 +71,7 @@ class Circle
     float get_xVel()                          { return xVel_; } ;
     float get_yVel()                          { return yVel_; } ;
     float get_radius()                        { return radius_; } ;
-    Eigen::MatrixXd get_P()             { return P_; } ;
+    Eigen::MatrixXd get_P()                   { return P_; } ;
     
     void set_x          ( float x )           { x_     = x; } ;
     void set_y          ( float y )           { y_     = y; } ;

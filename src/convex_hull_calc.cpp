@@ -557,12 +557,17 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
 {
     float delta = upperBound - lowerBound;
 
-    if ( *alpha < lowerBound ) {
-        while ( *alpha < lowerBound ) {
+    if ( *alpha < lowerBound )
+    {
+        while ( *alpha < lowerBound )
+        {
             *alpha += delta;
         }
-    } else if ( *alpha >= lowerBound ) {
-        while ( *alpha >= lowerBound ) {
+    }
+    else if ( *alpha >= lowerBound )
+    {
+        while ( *alpha >= lowerBound )
+        {
             *alpha -= delta;
         }
     }
@@ -571,9 +576,11 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
 
 void FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth )
 {
-    if ( !std::isinf ( errorRectangleSquared ) && !std::isinf ( errorCircleSquared ) ) {
+    if ( !std::isinf ( errorRectangleSquared ) && !std::isinf ( errorCircleSquared ) )
+    {
         float probabilityScaling = 1.0;
-        if ( circleDiameter > 0.5*typicalCorridorWidth ) {
+        if ( circleDiameter > 0.5*typicalCorridorWidth )
+        {
             // Circles with a very large radius could have a smaller error compared to fitting a line. For the type of environment, this is very unlikely.
             // Therefore, the probability of large circles (diameter > typicalCorridorWidth) is reduced in an exponential fashion
             probabilityScaling = std::exp ( -1/ ( 0.5*typicalCorridorWidth ) * ( circleDiameter -0.5*typicalCorridorWidth ) );
@@ -585,7 +592,9 @@ void FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSqu
 
         pmf_.setProbability ( "Rectangle", pRectangle );
         pmf_.setProbability ( "Circle", pCircle );
-    } else {
+    }
+    else
+    {
         // Infinity detected on one of the elements: this is the case when the number of points is too small to do a fit. Equal probability set.
         pmf_.setProbability ( "Rectangle", 0.5 );
         pmf_.setProbability ( "Circle", 0.5 );
@@ -607,96 +616,96 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
     this->pmf_.update ( featureProbabilities_in.pmf_ );
 }
 
-void FeatureProperties::updateCircleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt) 
+void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
-        Eigen::MatrixXd F(5,5);
-        F << 1.0, 0.0, dt,  0.0, 0.0,
-             0.0, 1.0, 0.0, dt,  0.0,
-             0.0, 0.0, 1.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 1.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 1.0;
+    Eigen::MatrixXd F ( 5,5 );
+    F << 1.0, 0.0, dt,  0.0, 0.0,
+         0.0, 1.0, 0.0, dt,  0.0,
+         0.0, 0.0, 1.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 1.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 1.0;
 
-        Eigen::MatrixXd x_k_1_k_1(4,1);
-        x_k_1_k_1 << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel(), circle_.get_radius();
-        
-        Eigen::MatrixXd H(4,4);
-        H << 1.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 1.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 1.0;
-             
-        Eigen::MatrixXd Identity;
-        Identity.setIdentity(H.rows(), H.cols()); ;
-        
-        Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1; 
-        Eigen::MatrixXd P_k_k_1 = F*circle_.get_P()*F.transpose() + Q_k;
-        
-        Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
-        Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
-        Eigen::MatrixXd K_k = P_k_k_1*H.transpose()*S_k.inverse();
-        Eigen::MatrixXd x_k_k = x_k_1_k_1 + K_k*y_k;
-        Eigen::MatrixXd P_k_k = (Identity - K_k*H)*P_k_k_1;
-        
-        circle_.set_x( x_k_k(0) );
-        circle_.set_y( x_k_k(1) );
-        circle_.set_xVel( x_k_k(2) );
-        circle_.set_yVel( x_k_k(3) );
-        circle_.set_radius(x_k_k(4) );
-        
-        circle_.set_P( P_k_k );
+    Eigen::MatrixXd x_k_1_k_1 ( 4,1 );
+    x_k_1_k_1 << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel(), circle_.get_radius();
+
+    Eigen::MatrixXd H ( 4,4 );
+    H << 1.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 1.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 1.0;
+
+    Eigen::MatrixXd Identity;
+    Identity.setIdentity ( H.rows(), H.cols() ); ;
+
+    Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1;
+    Eigen::MatrixXd P_k_k_1 = F*circle_.get_P() *F.transpose() + Q_k;
+
+    Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
+    Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
+    Eigen::MatrixXd K_k = P_k_k_1*H.transpose() *S_k.inverse();
+    Eigen::MatrixXd x_k_k = x_k_1_k_1 + K_k*y_k;
+    Eigen::MatrixXd P_k_k = ( Identity - K_k*H ) *P_k_k_1;
+
+    circle_.set_x ( x_k_k ( 0 ) );
+    circle_.set_y ( x_k_k ( 1 ) );
+    circle_.set_xVel ( x_k_k ( 2 ) );
+    circle_.set_yVel ( x_k_k ( 3 ) );
+    circle_.set_radius ( x_k_k ( 4 ) );
+
+    circle_.set_P ( P_k_k );
 }
 
-// void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt) 
-void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k, float dt)
+// void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt)
+void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
-        Eigen::MatrixXd F(8, 8);
-        F << 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+    Eigen::MatrixXd F ( 8, 8 );
+    F << 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
 
-        Eigen::MatrixXd x_k_1_k_1(8,1);
-        x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(),rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
-        
-        Eigen::MatrixXd H(8, 8);
-        H << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
-             
-        Eigen::MatrixXd I;
-        I.setIdentity(H.rows(), H.cols()); ;
-        
-        Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1; 
-        Eigen::MatrixXd P_k_k_1 = F*rectangle_.get_P()*F.transpose() + Q_k;
-        
-        Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
-        Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
-        Eigen::MatrixXd K_k = P_k_k_1*H.transpose()*S_k.inverse();
-        Eigen::MatrixXd x_k_k = x_k_1_k_1 + K_k*y_k;
-        Eigen::MatrixXd P_k_k = (I - K_k*H)*P_k_k_1;
-        
-        rectangle_.set_x( x_k_k(0) );
-        rectangle_.set_y( x_k_k(1) );
-        rectangle_.set_yaw( x_k_k(2) );
-        rectangle_.set_xVel( x_k_k(3) );
-        rectangle_.set_yVel( x_k_k(4) );
-        rectangle_.set_yawVel( x_k_k(5) );
-        rectangle_.set_w( x_k_k(6) );
-        rectangle_.set_d(x_k_k(7) );
-        
-        rectangle_.set_P( P_k_k );
+    Eigen::MatrixXd x_k_1_k_1 ( 8,1 );
+    x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(),rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
+
+    Eigen::MatrixXd H ( 8, 8 );
+    H << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+
+    Eigen::MatrixXd I;
+    I.setIdentity ( H.rows(), H.cols() ); ;
+
+    Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1;
+    Eigen::MatrixXd P_k_k_1 = F*rectangle_.get_P() *F.transpose() + Q_k;
+
+    Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
+    Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
+    Eigen::MatrixXd K_k = P_k_k_1*H.transpose() *S_k.inverse();
+    Eigen::MatrixXd x_k_k = x_k_1_k_1 + K_k*y_k;
+    Eigen::MatrixXd P_k_k = ( I - K_k*H ) *P_k_k_1;
+
+    rectangle_.set_x ( x_k_k ( 0 ) );
+    rectangle_.set_y ( x_k_k ( 1 ) );
+    rectangle_.set_yaw ( x_k_k ( 2 ) );
+    rectangle_.set_xVel ( x_k_k ( 3 ) );
+    rectangle_.set_yVel ( x_k_k ( 4 ) );
+    rectangle_.set_yawVel ( x_k_k ( 5 ) );
+    rectangle_.set_w ( x_k_k ( 6 ) );
+    rectangle_.set_d ( x_k_k ( 7 ) );
+
+    rectangle_.set_P ( P_k_k );
 }
 
 // void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k)
