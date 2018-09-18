@@ -158,6 +158,7 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
 Circle::Circle()
 {
     float notANumber = 0.0/0.0;
+    P_.setIdentity( 5, 5 ); 
     this->setProperties( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber  ); // Produces NaN values, meaning that the properties are not initialized yet
 }
 
@@ -232,6 +233,29 @@ std::vector< geo::Vec2f > Circle::convexHullPoints(unsigned int nPoints)
   
   return Points;
 }
+
+float Circle::predictX( float dt )
+{
+        return x_ + dt * xVel_;
+}
+
+float Circle::predictY( float dt )
+{
+        return y_ + dt * yVel_;
+}
+
+void Circle::predictPos( float* predictedX, float* predictedY, float dt )
+{
+        *predictedX = predictX( dt );
+        *predictedY = predictY( dt );
+}
+
+void Circle::predictAndUpdatePos( float dt )
+{
+        x_ = predictX( dt );
+        y_ = predictY( dt );
+}
+
 
 float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, const geo::Pose3D& pose , unsigned int cornerIndex )
 {
@@ -464,7 +488,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
 Rectangle::Rectangle()
 {
     float notANumber = 0.0/0.0;
-    P_.setIdentity(2,2); 
+    P_.setIdentity( 8, 8 ); 
     this->setValues( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber ); // Produces NaN values, meaning that the properties are not initialized yet
 }
 
@@ -492,6 +516,35 @@ void Rectangle::printValues ( )
     std::cout << " roll_ = "  << roll_;
     std::cout << " pitch_ = " << pitch_;
     std::cout << " yaw_ = "   << yaw_ << std::endl;
+}
+
+float Rectangle::predictX( float dt )
+{
+        return x_ + dt * xVel_;
+}
+
+float Rectangle::predictY( float dt )
+{
+        return y_ + dt * yVel_;
+}
+
+float Rectangle::predictYaw( float dt )
+{
+        return yaw_ + dt * yawVel_;
+}
+
+void Rectangle::predictPos( float* predictedX, float* predictedY, float* predictedYaw, float dt )
+{
+        *predictedX = predictX( dt );
+        *predictedY = predictY( dt );
+        *predictedYaw = predictYaw( dt );
+}
+
+void Rectangle::predictAndUpdatePos( float dt )
+{
+        x_ = predictX( dt );
+        y_ = predictY( dt );
+        yaw_ = predictYaw( dt );
 }
 
 void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color, std::string ns )
@@ -619,35 +672,40 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
 void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
-    Eigen::MatrixXd F ( 5,5 );
-    F << 1.0, 0.0, dt,  0.0, 0.0,
-         0.0, 1.0, 0.0, dt,  0.0,
-         0.0, 0.0, 1.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 1.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 1.0;
+//         std::cout << "updateCircleFeatures Test 1" << std::endl;
+    Eigen::MatrixXd F ( 5, 5 );
+    F << 1.0, 0.0, dt,  0.0, 0.0,  // x 
+         0.0, 1.0, 0.0, dt,  0.0,  // y 
+         0.0, 0.0, 1.0, 0.0, 0.0,  // x vel 
+         0.0, 0.0, 0.0, 1.0, 0.0,  // y vel 
+         0.0, 0.0, 0.0, 0.0, 1.0;  // radius
 
-    Eigen::MatrixXd x_k_1_k_1 ( 4,1 );
+//          std::cout << "updateCircleFeatures Test 2" << std::endl;
+    Eigen::MatrixXd x_k_1_k_1 ( 5,1 );
     x_k_1_k_1 << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel(), circle_.get_radius();
 
-    Eigen::MatrixXd H ( 4,4 );
+//     std::cout << "updateCircleFeatures Test 3" << std::endl;
+    Eigen::MatrixXd H ( 3, 5 );
     H << 1.0, 0.0, 0.0, 0.0, 0.0,
          0.0, 1.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0,
          0.0, 0.0, 0.0, 0.0, 1.0;
 
+//          std::cout << "updateCircleFeatures Test 4" << std::endl;
     Eigen::MatrixXd Identity;
-    Identity.setIdentity ( H.rows(), H.cols() ); ;
+    Identity.setIdentity ( F.rows(), F.cols() ); ;
 
+//     std::cout << "updateCircleFeatures Test 5" << std::endl;
     Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1;
     Eigen::MatrixXd P_k_k_1 = F*circle_.get_P() *F.transpose() + Q_k;
 
+//     std::cout << "updateCircleFeatures Test 6" << std::endl;
     Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
     Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
     Eigen::MatrixXd K_k = P_k_k_1*H.transpose() *S_k.inverse();
-    Eigen::MatrixXd x_k_k = x_k_1_k_1 + K_k*y_k;
+    Eigen::MatrixXd x_k_k = x_k_k_1 + K_k*y_k;
     Eigen::MatrixXd P_k_k = ( Identity - K_k*H ) *P_k_k_1;
 
+//     std::cout << "updateCircleFeatures Test 7" << std::endl;
     circle_.set_x ( x_k_k ( 0 ) );
     circle_.set_y ( x_k_k ( 1 ) );
     circle_.set_xVel ( x_k_k ( 2 ) );
@@ -655,47 +713,51 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXd Q_k, Eigen::Matri
     circle_.set_radius ( x_k_k ( 4 ) );
 
     circle_.set_P ( P_k_k );
+//     std::cout << "updateCircleFeatures Finished" << std::endl;
 }
 
 // void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt)
 void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
+//         std::cout << "updateRectangleFeatures Test 1" << std::endl;
     Eigen::MatrixXd F ( 8, 8 );
-    F << 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
-
+    F << 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0, 0.0,  // x 
+         0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0,  // y 
+         0.0, 0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0,  // orientation
+         0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,  // x vel 
+         0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,  // y vel 
+         0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,  // rotational vel
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,  // width
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;  // length
+// std::cout << "updateRectangleFeatures Test 2" << std::endl;
     Eigen::MatrixXd x_k_1_k_1 ( 8,1 );
     x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(),rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
-
-    Eigen::MatrixXd H ( 8, 8 );
-    H << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
-
+// std::cout << "updateRectangleFeatures Test 3" << std::endl;
+    Eigen::MatrixXd H ( 5, 8 );
+    H << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+// std::cout << "updateRectangleFeatures Test 4" << std::endl;
     Eigen::MatrixXd I;
-    I.setIdentity ( H.rows(), H.cols() ); ;
-
+    I.setIdentity ( F.rows(), F.cols() );
+// std::cout << "updateRectangleFeatures Test 5" << std::endl;
     Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1;
+//     std::cout << "updateRectangleFeatures Test 6" << std::endl;
     Eigen::MatrixXd P_k_k_1 = F*rectangle_.get_P() *F.transpose() + Q_k;
-
+// std::cout << "updateRectangleFeatures Test 7" << std::endl;
     Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
+//     std::cout << "updateRectangleFeatures Test 8" << std::endl;
     Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
+//     std::cout << "updateRectangleFeatures Test 9" << std::endl;
     Eigen::MatrixXd K_k = P_k_k_1*H.transpose() *S_k.inverse();
-    Eigen::MatrixXd x_k_k = x_k_1_k_1 + K_k*y_k;
+//     std::cout << "updateRectangleFeatures Test 10" << std::endl;
+    Eigen::MatrixXd x_k_k = x_k_k_1 + K_k*y_k;
+//     std::cout << "updateRectangleFeatures Test 11" << std::endl;
     Eigen::MatrixXd P_k_k = ( I - K_k*H ) *P_k_k_1;
-
+// std::cout << "updateRectangleFeatures Test 12" << std::endl;
     rectangle_.set_x ( x_k_k ( 0 ) );
     rectangle_.set_y ( x_k_k ( 1 ) );
     rectangle_.set_yaw ( x_k_k ( 2 ) );
@@ -706,6 +768,7 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::Ma
     rectangle_.set_d ( x_k_k ( 7 ) );
 
     rectangle_.set_P ( P_k_k );
+//     std::cout << "updateRectangleFeatures Finished" << std::endl;
 }
 
 // void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k)

@@ -92,6 +92,14 @@ class Circle
     
     std::vector< geo::Vec2f > convexHullPoints(unsigned int nPoints);
 
+    float predictX( float dt );
+    
+    float predictY( float dt );
+    
+    void predictPos( float* predictedX, float* predictedY, float dt );
+    
+    void predictAndUpdatePos( float dt );
+    
     void printProperties();
 };
 
@@ -156,6 +164,16 @@ class Rectangle
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color, std::string ns );
     
     std::vector<geo::Vec2f> determineCorners( float associationDistance);
+    
+    float predictX( float dt );
+    
+    float predictY( float dt );
+    
+    float predictYaw( float dt );
+    
+    void predictPos( float* predictedX, float* predictedY, float* predictedYaw, float dt );
+    
+    void predictAndUpdatePos( float dt );
 
     void printValues();
 
