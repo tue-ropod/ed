@@ -88,6 +88,8 @@ class Circle
     
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color );
     
+    void setTranslationalVelocityMarker( visualization_msgs::Marker& marker, unsigned int ID );
+    
     geo::Pose3D getPose() {geo::Pose3D pose(x_, y_, z_, roll_, pitch_,yaw_); return pose; };
     
     std::vector< geo::Vec2f > convexHullPoints(unsigned int nPoints);
@@ -162,6 +164,10 @@ class Rectangle
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color);
     
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color, std::string ns );
+    
+    void setTranslationalVelocityMarker( visualization_msgs::Marker& marker, unsigned int ID );
+    
+    void setRotationalVelocityMarker( visualization_msgs::Marker& marker, unsigned int ID );
     
     std::vector<geo::Vec2f> determineCorners( float associationDistance);
     

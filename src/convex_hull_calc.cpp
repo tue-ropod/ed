@@ -160,6 +160,8 @@ Circle::Circle()
     float notANumber = 0.0/0.0;
     P_.setIdentity( 5, 5 ); 
     this->setProperties( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber  ); // Produces NaN values, meaning that the properties are not initialized yet
+    xVel_   = 0.0;
+    yVel_   = 0.0;
 }
 
 void Circle::setProperties ( float x, float y, float z, float roll, float pitch, float yaw, float radius )
@@ -196,19 +198,21 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
 
 void Circle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color )
 {
+        
+        std::cout << "Circle: ID = " << ID << std::endl;
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time::now();
-    marker.ns = "default namespace";
+    marker.ns = "Position Marker";
     marker.id = ID;
     marker.type = visualization_msgs::Marker::CYLINDER;
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
     marker.pose.position.z = z_;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = 0.0;
-    marker.pose.orientation.w = 1.0;
+//     marker.pose.orientation.x = 0.0;
+//     marker.pose.orientation.y = 0.0;
+//     marker.pose.orientation.z = 0.0;
+//     marker.pose.orientation.w = 1.0;
     marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll_, pitch_, yaw_ );
     marker.scale.x = 2*radius_;
     marker.scale.y = 2*radius_;
@@ -217,6 +221,35 @@ void Circle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, st
     marker.color = color;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
+}
+
+void Circle::setTranslationalVelocityMarker( visualization_msgs::Marker& marker, unsigned int ID )
+{
+    marker.header.frame_id = "/map";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "Translational Velocity Marker";
+    marker.id = ID;
+    marker.type = visualization_msgs::Marker::ARROW;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = x_;
+    marker.pose.position.y = y_;
+    marker.pose.position.z = z_;
+
+    // Pivot point is around the tip of its tail. Identity orientation points it along the +X axis. 
+    // scale.x is the arrow length, scale.y is the arrow width and scale.z is the arrow height.     
+    float rollVel = 0.0;
+    float pitchVel = 0.0;
+    float yawVel = atan2( yVel_, xVel_ );
+    marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( rollVel, pitchVel, yawVel );
+
+    marker.scale.x = sqrt( pow(xVel_, 2.0) + pow(yVel_, 2.0) );
+    marker.scale.y = 0.02;
+    marker.scale.z = 0.02;
+    
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    marker.color.a = 1.0;
 }
 
 std::vector< geo::Vec2f > Circle::convexHullPoints(unsigned int nPoints)
@@ -490,6 +523,9 @@ Rectangle::Rectangle()
     float notANumber = 0.0/0.0;
     P_.setIdentity( 8, 8 ); 
     this->setValues( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber ); // Produces NaN values, meaning that the properties are not initialized yet
+    xVel_   = 0.0;
+    yVel_   = 0.0;
+    yawVel_ = 0.0;
 }
 
 void Rectangle::setValues ( float x, float y, float z, float w, float d, float h, float roll, float pitch, float yaw )
@@ -549,6 +585,7 @@ void Rectangle::predictAndUpdatePos( float dt )
 
 void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color, std::string ns )
 {
+        std::cout << "Rectangle: ID = " << ID << std::endl;
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time::now();
     marker.ns = ns;
@@ -558,11 +595,14 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID,
     marker.pose.position.x = x_;
     marker.pose.position.y = y_;
     marker.pose.position.z = z_;
+//     marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( 0.0, 0.0, 0.0 );
     marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( roll_, pitch_, yaw_ );
     marker.scale.x = w_;
     marker.scale.y = d_;
     marker.scale.z = 0.1;
     marker.color = color;
+    
+    std::cout << "Rectangle: pos = " << x_ << ", " << y_ << ", " << z_ << std::endl;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
@@ -580,7 +620,68 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID
 
 void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color)
 {
-        this->setMarker ( marker, ID, color, "default namespace" ); 
+        this->setMarker ( marker, ID, color, "Position Marker" ); 
+}
+
+void Rectangle::setTranslationalVelocityMarker( visualization_msgs::Marker& marker, unsigned int ID )
+{
+    marker.header.frame_id = "/map";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "Translational Velocity Marker";
+    marker.id = ID;
+    marker.type = visualization_msgs::Marker::ARROW;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = x_;
+    marker.pose.position.y = y_;
+    marker.pose.position.z = z_;
+    
+    float rollTranslationalVel = 0.0;
+    float pitchTranslationalVel = 0.0;
+    float yawTranslationalVel = std::atan2( yVel_, xVel_ );
+    marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( rollTranslationalVel, pitchTranslationalVel, yawTranslationalVel );
+
+   // Pivot point is around the tip of its tail. Identity orientation points it along the +X axis. 
+   // scale.x is the arrow length, scale.y is the arrow width and scale.z is the arrow height.     
+    marker.scale.x = std::sqrt( std::pow(xVel_, 2.0) + std::pow(yVel_, 2.0) );
+    marker.scale.y = 0.02;
+    marker.scale.z = 0.02;
+    
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    marker.color.a = 1.0;
+}
+
+void Rectangle::setRotationalVelocityMarker( visualization_msgs::Marker& marker, unsigned int ID )
+{
+        // At the first corner, place an indicator about the rotational vel
+    std::vector<geo::Vec2f> corners = determineCorners( 0.0);
+    marker.header.frame_id = "/map";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "Rotational Velocity Marker";
+    marker.id = ID;
+    marker.type = visualization_msgs::Marker::ARROW;
+    marker.action = visualization_msgs::Marker::ADD;
+    
+    marker.pose.position.x = corners[0].x;
+    marker.pose.position.y = corners[0].y;
+    marker.pose.position.z = z_;
+
+    // Pivot point is around the tip of its tail. Identity orientation points it along the +X axis. 
+    // scale.x is the arrow length, scale.y is the arrow width and scale.z is the arrow height.     
+    float rollRotVel = 0.0;
+    float pitchRotVel = 0.0;
+    float yawRotVel = 3*M_PI_4 + yaw_;
+    marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( rollRotVel, pitchRotVel, yawRotVel );
+
+    marker.scale.x = yawVel_;
+    marker.scale.y = 0.02;
+    marker.scale.z = 0.02;
+    
+    marker.color.r = 0.0;
+    marker.color.g = 0.0;
+    marker.color.b = 1.0;
+    marker.color.a = 1.0;    
 }
 
 std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance )
