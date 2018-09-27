@@ -30,6 +30,7 @@ namespace tracking
 #define MIN_POINTS_LINEFIT 5 // [-]
 #define ARBITRARY_HEIGHT 0.03 //[m]
 #define ARBITRARY_DEPTH ARBITRARY_HEIGHT
+#define MARGIN_RECTANGLE_INTERCHANGE 10*M_PI/180 //[rad]
 
 enum FITTINGMETHOD {
     NONE = 1,
@@ -156,7 +157,7 @@ class Rectangle
     void set_yaw        ( float yaw )           { yaw_   = yaw; } ;
     void set_xVel       ( float xVel )          { xVel_  = xVel; } ;
     void set_yVel       ( float yVel )          { yVel_  = yVel; } ;
-    void set_yawVel     ( float yawVel )        { yVel_  = yawVel; } ;
+    void set_yawVel     ( float yawVel )        { yawVel_  = yawVel; } ;
     void set_P          ( Eigen::MatrixXd P )   { P_     = P; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
@@ -180,6 +181,8 @@ class Rectangle
     void predictPos( float* predictedX, float* predictedY, float* predictedYaw, float dt );
     
     void predictAndUpdatePos( float dt );
+    
+    void interchangeRectangleFeatures();
 
     void printValues();
 
@@ -229,7 +232,7 @@ class FeatureProbabilities
     float get_pCircle() const {
         return ( float ) pmf_.getProbability ( "Circle" );
     } ;
-    void setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleRadius, float typicalCorridorWidth );
+    bool setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleRadius, float typicalCorridorWidth );
 
     void update ( float pRectangle_measured, float pCircle_measured );
     
@@ -297,9 +300,10 @@ class FeatureProperties
     void updateCircleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt);
     
     void updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k, float dt);
+    
+    void printProperties();
 
 };
-
 
 
 }

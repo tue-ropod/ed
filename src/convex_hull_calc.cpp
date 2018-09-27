@@ -199,7 +199,7 @@ void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
 void Circle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color )
 {
         
-        std::cout << "Circle: ID = " << ID << std::endl;
+//         std::cout << "Circle: ID = " << ID << std::endl;
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time::now();
     marker.ns = "Position Marker";
@@ -313,6 +313,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float dy = y_start1 - y_end;
     float width = sqrt ( dx*dx+dy*dy );
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
+    wrapToInterval(&theta, 0, 2*M_PI);
 
     float x_start2 = x_end;
     float y_start2 = y_end;
@@ -495,6 +496,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
     float mean_error2 = fitLine ( points, beta_hat, it_low, it_high ) ;
 
     float theta = atan2 ( beta_hat ( 1 ), 1 );
+    wrapToInterval(&theta, 0, 2*M_PI);
 
     unsigned int ii_start = std::distance ( points.begin(), *it_low );
     
@@ -549,6 +551,9 @@ void Rectangle::printValues ( )
     std::cout << " w_ = "     << w_;
     std::cout << " d_ = "     << d_;
     std::cout << " h_ = "     << h_;
+    std::cout << " xVel_ = "  << xVel_;
+    std::cout << " yVel_ = "  << yVel_;
+    std::cout << " yawVel_ = "<< yawVel_;
     std::cout << " roll_ = "  << roll_;
     std::cout << " pitch_ = " << pitch_;
     std::cout << " yaw_ = "   << yaw_ << std::endl;
@@ -585,7 +590,7 @@ void Rectangle::predictAndUpdatePos( float dt )
 
 void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID, std_msgs::ColorRGBA color, std::string ns )
 {
-        std::cout << "Rectangle: ID = " << ID << std::endl;
+//         std::cout << "Rectangle: ID = " << ID << std::endl;
     marker.header.frame_id = "/map";
     marker.header.stamp = ros::Time::now();
     marker.ns = ns;
@@ -602,7 +607,7 @@ void Rectangle::setMarker ( visualization_msgs::Marker& marker, unsigned int ID,
     marker.scale.z = 0.1;
     marker.color = color;
     
-    std::cout << "Rectangle: pos = " << x_ << ", " << y_ << ", " << z_ << std::endl;
+//     std::cout << "Rectangle: pos = " << x_ << ", " << y_ << ", " << z_ << std::endl;
 
     marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
@@ -671,10 +676,11 @@ void Rectangle::setRotationalVelocityMarker( visualization_msgs::Marker& marker,
     // scale.x is the arrow length, scale.y is the arrow width and scale.z is the arrow height.     
     float rollRotVel = 0.0;
     float pitchRotVel = 0.0;
-    float yawRotVel = 3*M_PI_4 + yaw_;
+//     float yawRotVel = M_PI_4 + yaw_;
+    float yawRotVel = atan2(d_, w_) + M_PI_2;
     marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw ( rollRotVel, pitchRotVel, yawRotVel );
-
-    marker.scale.x = yawVel_;
+    
+    marker.scale.x = ( pow(w_, 2.0) + pow(d_, 2.0) )*yawVel_;
     marker.scale.y = 0.02;
     marker.scale.z = 0.02;
     
@@ -707,6 +713,35 @@ std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance 
     return corners;
 }
 
+void Rectangle::interchangeRectangleFeatures()
+{
+        float widthOld = w_;
+        w_ = d_;
+        d_ = widthOld;
+        
+        yaw_ += M_PI_2;
+        wrapToInterval(&yaw_, 0, 2*M_PI);
+        
+//      matrix.block<p,q>(i,j) // Block of size (p,q), starting at (i,j)  
+//         std::cout << "P old = \n" << P_ << std::endl;
+        Eigen::MatrixXd widthCovOld( 6, 1 );
+        widthCovOld = P_.block< 1, 6 >( 6, 0 );
+        
+//         std::cout << "widthCovOld = \n" << widthCovOld << std::endl;
+        
+        P_.block< 1, 6 >( 6, 0 ) = P_.block< 1, 6 >( 7, 0 );
+        P_.block< 6, 1 >( 0, 6 ) = P_.block< 1, 6 >( 7, 0 ).transpose(); // cause P is symmetric
+        
+        P_.block< 1, 6 >( 7, 0 ) = widthCovOld;
+        P_.block< 6, 1 >( 0, 7 ) = widthCovOld.transpose();
+        
+        float P_6_6Old = P_ ( 6, 6 );
+        P_ ( 6, 6 ) = P_( 7, 7 );
+        P_( 7, 7 ) = P_6_6Old;
+        
+//         std::cout << "P new = \n" << P_ << std::endl;    
+}
+
 void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
 {
     float delta = upperBound - lowerBound;
@@ -718,9 +753,9 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
             *alpha += delta;
         }
     }
-    else if ( *alpha >= lowerBound )
+    else if ( *alpha >= upperBound )
     {
-        while ( *alpha >= lowerBound )
+        while ( *alpha >= upperBound )
         {
             *alpha -= delta;
         }
@@ -728,9 +763,9 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
 
 }
 
-void FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth )
+bool FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth )
 {
-    if ( !std::isinf ( errorRectangleSquared ) && !std::isinf ( errorCircleSquared ) )
+    if ( !std::isinf ( errorRectangleSquared ) || !std::isinf ( errorCircleSquared ) )
     {
         float probabilityScaling = 1.0;
         if ( circleDiameter > 0.5*typicalCorridorWidth )
@@ -746,12 +781,18 @@ void FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSqu
 
         pmf_.setProbability ( "Rectangle", pRectangle );
         pmf_.setProbability ( "Circle", pCircle );
+        return true;
     }
     else
     {
-        // Infinity detected on one of the elements: this is the case when the number of points is too small to do a fit. Equal probability set.
-        pmf_.setProbability ( "Rectangle", 0.5 );
-        pmf_.setProbability ( "Circle", 0.5 );
+        // Infinity detected on both of the elements: this is the case when the number of points is too small to do a fit. Equal probability set.
+//         pmf_.setProbability ( "Rectangle", 0.5 );
+//         pmf_.setProbability ( "Circle", 0.5 );
+    
+            // TODO if there are enough points for a single fit (probably circle only), is this fit realistic?
+            // Acatually, it should be measured if the object which is modelled is realistic by comparing the laser scan with the expected scan based on that object
+            
+            return false;
     }
 }
 
@@ -823,17 +864,34 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::Ma
 {
 //         std::cout << "updateRectangleFeatures Test 1" << std::endl;
     Eigen::MatrixXd F ( 8, 8 );
-    F << 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0, 0.0,  // x 
-         0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0,  // y 
-         0.0, 0.0, 1.0, 0.0, dt,  0.0, 0.0, 0.0,  // orientation
+    F << 1.0, 0.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0,  // x 
+         0.0, 1.0, 0.0, 0.0, dt,  0.0, 0.0, 0.0,  // y 
+         0.0, 0.0, 1.0, 0.0, 0.0, dt,  0.0, 0.0,  // orientation
          0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,  // x vel 
          0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,  // y vel 
          0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,  // rotational vel
          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,  // width
          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;  // length
+         
+//          std::cout << "F = \n" << F << std::endl;
+         
 // std::cout << "updateRectangleFeatures Test 2" << std::endl;
+
+std::cout << "Update rectangle parameters: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
+std::cout << "std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 )  = " << std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) ) - M_PI_2 )  << std::endl;
+
+    if( std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 ) < MARGIN_RECTANGLE_INTERCHANGE)
+    {
+            rectangle_.printValues();
+            rectangle_.interchangeRectangleFeatures();
+            rectangle_.printValues();
+            ROS_FATAL( "Rectangle: interchange of feature-properties" );
+    }
+
     Eigen::MatrixXd x_k_1_k_1 ( 8,1 );
     x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(),rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
+//      std::cout << "x_k_1_k_1 = \n" << x_k_1_k_1 << std::endl;
+    
 // std::cout << "updateRectangleFeatures Test 3" << std::endl;
     Eigen::MatrixXd H ( 5, 8 );
     H << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -841,13 +899,15 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::Ma
          0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+//          std::cout << "H = " << H << std::endl;
 // std::cout << "updateRectangleFeatures Test 4" << std::endl;
     Eigen::MatrixXd I;
     I.setIdentity ( F.rows(), F.cols() );
+//     std::cout << "I = " << I << std::endl;
 // std::cout << "updateRectangleFeatures Test 5" << std::endl;
     Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1;
 //     std::cout << "updateRectangleFeatures Test 6" << std::endl;
-    Eigen::MatrixXd P_k_k_1 = F*rectangle_.get_P() *F.transpose() + Q_k;
+    Eigen::MatrixXd P_k_k_1 = F* rectangle_.get_P() * F.transpose() + Q_k;
 // std::cout << "updateRectangleFeatures Test 7" << std::endl;
     Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
 //     std::cout << "updateRectangleFeatures Test 8" << std::endl;
@@ -859,6 +919,9 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::Ma
 //     std::cout << "updateRectangleFeatures Test 11" << std::endl;
     Eigen::MatrixXd P_k_k = ( I - K_k*H ) *P_k_k_1;
 // std::cout << "updateRectangleFeatures Test 12" << std::endl;
+    
+//      std::cout << "x_k_k = \n" << x_k_k << std::endl;
+    
     rectangle_.set_x ( x_k_k ( 0 ) );
     rectangle_.set_y ( x_k_k ( 1 ) );
     rectangle_.set_yaw ( x_k_k ( 2 ) );
@@ -895,6 +958,12 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::Ma
 //   rectangle_.set_P(P_k_k );
 // }
 
+void FeatureProperties::printProperties()
+{
+        std::cout << "Prob [circ, rect] = [" << featureProbabilities_.get_pCircle() << ", " << featureProbabilities_.get_pRectangle() << "]" << std::endl;
+        rectangle_.printValues();
+        circle_.printProperties();
+}
 
 }
 
