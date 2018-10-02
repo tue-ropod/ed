@@ -6,7 +6,6 @@ find_package(catkin REQUIRED COMPONENTS
   class_loader
   cv_bridge
   ed_object_models
-  ed_msgs
   geolib2
   geometry_msgs
   rgbd
@@ -19,10 +18,17 @@ find_package(catkin REQUIRED COMPONENTS
   tue_serialization
   message_generation
   tue_config
+  problib
 )
 
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
+
+# Generate messages in the 'msg' folder
+add_message_files(
+  FILES
+    EntityInfo.msg
+)
 
 # Generate services in the 'srv' folder
 add_service_files(
@@ -56,8 +62,8 @@ generate_messages(
 ###################################
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ed_core ed_io ed_visualization
-  CATKIN_DEPENDS tue_config tue_serialization rgbd ed_object_models
+  LIBRARIES ed_core ed_io
+  CATKIN_DEPENDS tue_config tue_serialization rgbd ed_object_models problib
   # DEPENDS system_lib
 )
 
@@ -129,13 +135,6 @@ add_library(ed_io
 target_link_libraries(ed_io ed_core)
 add_dependencies(ed_io ${PROJECT_NAME}_gencpp)
 
-add_library(ed_visualization
-  include/ed/helpers/image_publisher.h
-  src/helpers/image_publisher.cpp
-)
-target_link_libraries(ed_visualization ${catkin_LIBRARIES})
-add_dependencies(ed_visualization ${PROJECT_NAME}_gencpp)
-
 # ------------------------------------------------------------------------------------------------
 #                                               SERVER
 # ------------------------------------------------------------------------------------------------
@@ -146,7 +145,7 @@ add_executable(ed
   src/server.cpp
   src/plugin_container.cpp
 )
-target_link_libraries(ed ed_core ed_io ed_visualization)
+target_link_libraries(ed ed_core ed_io)
 add_dependencies(ed ${PROJECT_NAME}_gencpp)
 
 # ------------------------------------------------------------------------------------------------
