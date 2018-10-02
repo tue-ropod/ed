@@ -57,6 +57,17 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
 
 float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
 {
+        std::cout << "Going to fit object with the following points: " << std::endl;
+       
+        
+        for ( std::vector<geo::Vec2f>::iterator it = *it_low; it != *it_high; ++it ) 
+        {
+                geo::Vec2f point = *it;
+                std::cout << point << "\t ";
+        }
+        std::cout << "\n";
+        
+        
     switch ( FITTINGMETHOD )
     {
     case NONE:
@@ -296,7 +307,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     std::vector<geo::Vec2f>::iterator it_split = points.begin() + cornerIndex;
     std::vector<geo::Vec2f>::iterator it_end = points.end();
 
-    Eigen::VectorXd beta_hat1 ( 2 ), beta_hat2 ( 2 );
+    Eigen::VectorXf beta_hat1 ( 2 ), beta_hat2 ( 2 );
     bool validFit1, validFit2;
 
     float mean_error1 = fitLine ( points, beta_hat1, &it_start, &it_split );
@@ -313,7 +324,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float dy = y_start1 - y_end;
     float width = sqrt ( dx*dx+dy*dy );
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
-    wrapToInterval(&theta, 0, 2*M_PI);
+    //wrapToInterval(&theta, 0, 2*M_PI); // atan2-function wraps theta on 0, 2pi already, right?
 
     float x_start2 = x_end;
     float y_start2 = y_end;
@@ -329,6 +340,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2 - y_start2 );
     
     float roll = 0.0, pitch = 0.0, yaw = theta;
+    std::cout << "fitRectangle: info = " << center_x << ", " << center_y << ", " << width << ", " << depth << std::endl;
     rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
     unsigned int low_size = cornerIndex;
@@ -446,13 +458,13 @@ bool checkForSplit ( std::vector<geo::Vec2f>& points, unsigned int &ID,const geo
     }
 }
 
-float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )  //, unsigned int& index )
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )  //, unsigned int& index )
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
-
+std::cout << "Going to fit line with the following points: " << std::endl;
     unsigned int size = std::distance ( *it_start, *it_end );
-    Eigen::MatrixXd m ( size, 2 );
-    Eigen::VectorXd y ( size );
+    Eigen::MatrixXf m ( size, 2 );
+    Eigen::VectorXf y ( size );
     unsigned int counter = 0;
     
     std::vector<geo::Vec2f>::iterator it = *it_start;
@@ -467,9 +479,10 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
         m ( counter, 1 ) = ( double ) point.x;
         y ( counter ) = ( double ) point.y;
         counter++;
+        std::cout << point << "\t ";
     }
 
-    Eigen::MatrixXd mt ( size, 2 );
+    Eigen::MatrixXf mt ( size, 2 );
     mt = m.transpose();
 
     beta_hat = ( mt*m ).inverse() * mt * y;
@@ -492,11 +505,11 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std:
 
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose )
 {
-    Eigen::VectorXd beta_hat ( 2 );
+    Eigen::VectorXf beta_hat ( 2 );
     float mean_error2 = fitLine ( points, beta_hat, it_low, it_high ) ;
 
     float theta = atan2 ( beta_hat ( 1 ), 1 );
-    wrapToInterval(&theta, 0, 2*M_PI);
+//     wrapToInterval(&theta, 0, 2*M_PI);
 
     unsigned int ii_start = std::distance ( points.begin(), *it_low );
     
@@ -515,6 +528,9 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
     float center_y = 0.5* ( y_start + y_end );
 
     float roll = 0.0, pitch = 0.0, yaw = theta;
+    
+    std::cout << "setRectangularParametersForLine: info = " << center_x << ", " << center_y << ", " << width << std::endl;
+    
     rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
     return mean_error2;
@@ -720,11 +736,11 @@ void Rectangle::interchangeRectangleFeatures()
         d_ = widthOld;
         
         yaw_ += M_PI_2;
-        wrapToInterval(&yaw_, 0, 2*M_PI);
+//         wrapToInterval(&yaw_, 0, 2*M_PI);
         
 //      matrix.block<p,q>(i,j) // Block of size (p,q), starting at (i,j)  
 //         std::cout << "P old = \n" << P_ << std::endl;
-        Eigen::MatrixXd widthCovOld( 6, 1 );
+        Eigen::MatrixXf widthCovOld( 6, 1 );
         widthCovOld = P_.block< 1, 6 >( 6, 0 );
         
 //         std::cout << "widthCovOld = \n" << widthCovOld << std::endl;
@@ -761,6 +777,29 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
         }
     }
 
+}
+
+template <typename T> int sgn(T val) 
+{
+    return (T(0) < val) - (val < T(0));
+}
+
+void unwrap (float *angleMeasured, float angleReference)
+{
+        
+        float diff = angleReference - *angleMeasured;
+        
+        int d = diff / (2*M_PI);
+        float r = fmod (diff,2*M_PI);
+        
+        *angleMeasured += d*2*M_PI;
+        
+        if( fabs(r) > M_PI )
+        {
+                *angleMeasured += sgn(r)*2*M_PI;
+        }
+        
+//         std::cout << "Unwrap: diff, d, r = " << diff << ", " << d << ", " << r << std::endl;
 }
 
 bool FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth )
@@ -811,11 +850,11 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
     this->pmf_.update ( featureProbabilities_in.pmf_ );
 }
 
-void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt )
+void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::MatrixXf z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
 //         std::cout << "updateCircleFeatures Test 1" << std::endl;
-    Eigen::MatrixXd F ( 5, 5 );
+    Eigen::MatrixXf F ( 5, 5 );
     F << 1.0, 0.0, dt,  0.0, 0.0,  // x 
          0.0, 1.0, 0.0, dt,  0.0,  // y 
          0.0, 0.0, 1.0, 0.0, 0.0,  // x vel 
@@ -823,29 +862,29 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXd Q_k, Eigen::Matri
          0.0, 0.0, 0.0, 0.0, 1.0;  // radius
 
 //          std::cout << "updateCircleFeatures Test 2" << std::endl;
-    Eigen::MatrixXd x_k_1_k_1 ( 5,1 );
+    Eigen::MatrixXf x_k_1_k_1 ( 5,1 );
     x_k_1_k_1 << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel(), circle_.get_radius();
 
 //     std::cout << "updateCircleFeatures Test 3" << std::endl;
-    Eigen::MatrixXd H ( 3, 5 );
+    Eigen::MatrixXf H ( 3, 5 );
     H << 1.0, 0.0, 0.0, 0.0, 0.0,
          0.0, 1.0, 0.0, 0.0, 0.0,
          0.0, 0.0, 0.0, 0.0, 1.0;
 
 //          std::cout << "updateCircleFeatures Test 4" << std::endl;
-    Eigen::MatrixXd Identity;
+    Eigen::MatrixXf Identity;
     Identity.setIdentity ( F.rows(), F.cols() ); ;
 
 //     std::cout << "updateCircleFeatures Test 5" << std::endl;
-    Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1;
-    Eigen::MatrixXd P_k_k_1 = F*circle_.get_P() *F.transpose() + Q_k;
+    Eigen::MatrixXf x_k_k_1 = F*x_k_1_k_1;
+    Eigen::MatrixXf P_k_k_1 = F*circle_.get_P() *F.transpose() + Q_k;
 
 //     std::cout << "updateCircleFeatures Test 6" << std::endl;
-    Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
-    Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
-    Eigen::MatrixXd K_k = P_k_k_1*H.transpose() *S_k.inverse();
-    Eigen::MatrixXd x_k_k = x_k_k_1 + K_k*y_k;
-    Eigen::MatrixXd P_k_k = ( Identity - K_k*H ) *P_k_k_1;
+    Eigen::MatrixXf y_k = z_k - H*x_k_k_1;
+    Eigen::MatrixXf S_k = H*P_k_k_1*H.transpose() + R_k;
+    Eigen::MatrixXf K_k = P_k_k_1*H.transpose() *S_k.inverse();
+    Eigen::MatrixXf x_k_k = x_k_k_1 + K_k*y_k;
+    Eigen::MatrixXf P_k_k = ( Identity - K_k*H ) *P_k_k_1;
 
 //     std::cout << "updateCircleFeatures Test 7" << std::endl;
     circle_.set_x ( x_k_k ( 0 ) );
@@ -859,11 +898,11 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXd Q_k, Eigen::Matri
 }
 
 // void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt)
-void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k, float dt )
+void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
 //         std::cout << "updateRectangleFeatures Test 1" << std::endl;
-    Eigen::MatrixXd F ( 8, 8 );
+    Eigen::MatrixXf F ( 8, 8 );
     F << 1.0, 0.0, 0.0, dt,  0.0, 0.0, 0.0, 0.0,  // x 
          0.0, 1.0, 0.0, 0.0, dt,  0.0, 0.0, 0.0,  // y 
          0.0, 0.0, 1.0, 0.0, 0.0, dt,  0.0, 0.0,  // orientation
@@ -877,23 +916,27 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXd Q_k, Eigen::Ma
          
 // std::cout << "updateRectangleFeatures Test 2" << std::endl;
 
-std::cout << "Update rectangle parameters: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
-std::cout << "std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 )  = " << std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) ) - M_PI_2 )  << std::endl;
+// std::cout << "Update rectangle parameters wrapped measurement: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
+unwrap( &z_k( 2 ), rectangle_.get_yaw() );
+
+// std::cout << "Update rectangle parameters unwrapped measurement: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
+// std::cout << "std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 )  = " << std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) ) - M_PI_2 )  << std::endl;
 
     if( std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 ) < MARGIN_RECTANGLE_INTERCHANGE)
     {
-            rectangle_.printValues();
+//             rectangle_.printValues();
             rectangle_.interchangeRectangleFeatures();
-            rectangle_.printValues();
-            ROS_FATAL( "Rectangle: interchange of feature-properties" );
+//             rectangle_.printValues();
+            ROS_WARN( "Rectangle: interchange of feature-properties" );
     }
 
-    Eigen::MatrixXd x_k_1_k_1 ( 8,1 );
+    Eigen::MatrixXf x_k_1_k_1 ( 8,1 );
     x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(),rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
-//      std::cout << "x_k_1_k_1 = \n" << x_k_1_k_1 << std::endl;
+//       std::cout << "x_k_1_k_1 = \n" << x_k_1_k_1.transpose() << std::endl;
+//       std::cout << "Measurement = \n " << z_k.transpose() << std::endl;
     
 // std::cout << "updateRectangleFeatures Test 3" << std::endl;
-    Eigen::MatrixXd H ( 5, 8 );
+    Eigen::MatrixXf H ( 5, 8 );
     H << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
          0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
          0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -901,23 +944,23 @@ std::cout << "std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 ) 
          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
 //          std::cout << "H = " << H << std::endl;
 // std::cout << "updateRectangleFeatures Test 4" << std::endl;
-    Eigen::MatrixXd I;
+    Eigen::MatrixXf I;
     I.setIdentity ( F.rows(), F.cols() );
 //     std::cout << "I = " << I << std::endl;
 // std::cout << "updateRectangleFeatures Test 5" << std::endl;
-    Eigen::MatrixXd x_k_k_1 = F*x_k_1_k_1;
+    Eigen::MatrixXf x_k_k_1 = F*x_k_1_k_1;
 //     std::cout << "updateRectangleFeatures Test 6" << std::endl;
-    Eigen::MatrixXd P_k_k_1 = F* rectangle_.get_P() * F.transpose() + Q_k;
+    Eigen::MatrixXf P_k_k_1 = F* rectangle_.get_P() * F.transpose() + Q_k;
 // std::cout << "updateRectangleFeatures Test 7" << std::endl;
-    Eigen::MatrixXd y_k = z_k - H*x_k_k_1;
+    Eigen::MatrixXf y_k = z_k - H*x_k_k_1;
 //     std::cout << "updateRectangleFeatures Test 8" << std::endl;
-    Eigen::MatrixXd S_k = H*P_k_k_1*H.transpose() + R_k;
+    Eigen::MatrixXf S_k = H*P_k_k_1*H.transpose() + R_k;
 //     std::cout << "updateRectangleFeatures Test 9" << std::endl;
-    Eigen::MatrixXd K_k = P_k_k_1*H.transpose() *S_k.inverse();
+    Eigen::MatrixXf K_k = P_k_k_1*H.transpose() *S_k.inverse();
 //     std::cout << "updateRectangleFeatures Test 10" << std::endl;
-    Eigen::MatrixXd x_k_k = x_k_k_1 + K_k*y_k;
+    Eigen::MatrixXf x_k_k = x_k_k_1 + K_k*y_k;
 //     std::cout << "updateRectangleFeatures Test 11" << std::endl;
-    Eigen::MatrixXd P_k_k = ( I - K_k*H ) *P_k_k_1;
+    Eigen::MatrixXf P_k_k = ( I - K_k*H ) *P_k_k_1;
 // std::cout << "updateRectangleFeatures Test 12" << std::endl;
     
 //      std::cout << "x_k_k = \n" << x_k_k << std::endl;
@@ -934,29 +977,6 @@ std::cout << "std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 ) 
     rectangle_.set_P ( P_k_k );
 //     std::cout << "updateRectangleFeatures Finished" << std::endl;
 }
-
-// void FeatureProperties::updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k)
-// { 
-// 
-//   Eigen::MatrixXd F(2,2), H(2,2), I(2,2);
-//   I.setIdentity(2,2);
-//   F = I;
-//   H = I;
-//  
-//   Eigen::VectorXd x_k_1_k_1(2);
-//   x_k_1_k_1 << rectangle_.get_w(),rectangle_.get_d();
-//   Eigen::VectorXd x_k_k_1 = F*x_k_1_k_1; // Predicted state estimate. F = Identity.
-//   Eigen::VectorXd y_k = z_k - H*x_k_k_1;// H = Identity
-//   Eigen::MatrixXd P_k_k_1 = rectangle_.get_P() + Q_k;
-//   Eigen::MatrixXd S_k = H*P_k_k_1*H + R_k; // H = H transpose
-//   Eigen::MatrixXd K_k = P_k_k_1*H*S_k.inverse();
-//   Eigen::VectorXd x_k_k = x_k_1_k_1 + K_k*y_k;
-//   Eigen::MatrixXd P_k_k = (I - K_k)*P_k_k_1;
-// 
-//   rectangle_.set_w(x_k_k(0) );
-//   rectangle_.set_d(x_k_k(1) );
-//   rectangle_.set_P(P_k_k );
-// }
 
 void FeatureProperties::printProperties()
 {

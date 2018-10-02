@@ -30,7 +30,7 @@ namespace tracking
 #define MIN_POINTS_LINEFIT 5 // [-]
 #define ARBITRARY_HEIGHT 0.03 //[m]
 #define ARBITRARY_DEPTH ARBITRARY_HEIGHT
-#define MARGIN_RECTANGLE_INTERCHANGE 10*M_PI/180 //[rad]
+#define MARGIN_RECTANGLE_INTERCHANGE 30*M_PI/180 //[rad]
 
 enum FITTINGMETHOD {
     NONE = 1,
@@ -52,11 +52,10 @@ public:
 
 };
 
-
 class Circle
 {
     float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_, radius_; // x, y, z-positions, roll, pitch, yaw and radius of circle
-    Eigen::MatrixXd P_; // estimated covariance for state = [x, y, xVel, yVel, radius]^T
+    Eigen::MatrixXf P_; // estimated covariance for state = [x, y, xVel, yVel, radius]^T
     
   public:
     Circle();
@@ -72,7 +71,7 @@ class Circle
     float get_xVel()                          { return xVel_; } ;
     float get_yVel()                          { return yVel_; } ;
     float get_radius()                        { return radius_; } ;
-    Eigen::MatrixXd get_P()                   { return P_; } ;
+    Eigen::MatrixXf get_P()                   { return P_; } ;
     
     void set_x          ( float x )           { x_     = x; } ;
     void set_y          ( float y )           { y_     = y; } ;
@@ -83,7 +82,7 @@ class Circle
     void set_xVel       ( float xVel )        { xVel_  = xVel; } ;
     void set_yVel       ( float yVel )        { yVel_  = yVel; } ;
     void set_radius     ( float radius )      { radius_ = radius; } ;
-    void set_P          ( Eigen::MatrixXd P ) { P_ = P; } ;
+    void set_P          ( Eigen::MatrixXf P ) { P_ = P; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
     
@@ -123,7 +122,7 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce,
 class Rectangle
 {
         float x_, y_, z_, w_, d_, h_, roll_, pitch_, yaw_, xVel_, yVel_, yawVel_; // x, y of center, width, height and rotation of rectangle
-        Eigen::MatrixXd P_;
+        Eigen::MatrixXf P_;
   public:
     Rectangle();
     
@@ -142,7 +141,7 @@ class Rectangle
     float get_xVel()                    { return xVel_; } ;
     float get_yVel()                    { return yVel_; } ;
     float get_yawVel()                  { return yawVel_; } ;
-    Eigen::MatrixXd get_P()             { return P_; } ;
+    Eigen::MatrixXf get_P()             { return P_; } ;
     
     geo::Pose3D getPose() {geo::Pose3D pose(x_, y_, z_, roll_, pitch_,yaw_); return pose; };
     
@@ -158,7 +157,7 @@ class Rectangle
     void set_xVel       ( float xVel )          { xVel_  = xVel; } ;
     void set_yVel       ( float yVel )          { yVel_  = yVel; } ;
     void set_yawVel     ( float yawVel )        { yawVel_  = yawVel; } ;
-    void set_P          ( Eigen::MatrixXd P )   { P_     = P; } ;
+    void set_P          ( Eigen::MatrixXf P )   { P_     = P; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
     
@@ -196,7 +195,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
 
 bool checkForSplit ( std::vector<geo::Vec2f>& points, unsigned int &ID,const geo::Pose3D& sensor_pose,  unsigned int cornerIndex );
 
-float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXd& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end ) ;//, unsigned int& index);
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end ) ;//, unsigned int& index);
 
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose );
 
@@ -293,13 +292,13 @@ class FeatureProperties
 
     void updateCircleSize(float Q_k, float R_k, float z_k); // z = observation // TODO improve! -> Determine proper covariances
 
-    void updateRectangleSize(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k); // TODO improve! h-> Determine proper covariances
+    void updateRectangleSize(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k); // TODO improve! h-> Determine proper covariances
     
     void updatePosition();
     
-    void updateCircleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::MatrixXd z_k, float dt);
+    void updateCircleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::MatrixXf z_k, float dt);
     
-    void updateRectangleFeatures(Eigen::MatrixXd Q_k, Eigen::MatrixXd R_k, Eigen::VectorXd z_k, float dt);
+    void updateRectangleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt);
     
     void printProperties();
 
