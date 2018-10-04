@@ -346,7 +346,7 @@ bool srvQuery(ed::Query::Request& req, ed::Query::Response& res)
                     if (req.since_revision < prop.revision && prop.entry->info->serializable())
                     {
                         w.addArrayItem();
-                        w.writeValue("name", prop.entry->name);
+                        w.writeValue("name", prop.entry->name); 
                         prop.entry->info->serialize(prop.value, w);
                         w.endArrayItem();
                     }
@@ -382,8 +382,6 @@ bool srvQuery(ed::Query::Request& req, ed::Query::Response& res)
         }
     }
 
-//    std::cout << out.str() << std::endl;
-
     w.endArray();
 
     if (!removed_entities.empty())
@@ -409,8 +407,6 @@ bool srvSimpleQuery(ed::SimpleQuery::Request& req, ed::SimpleQuery::Response& re
 
     for(ed::WorldModel::const_iterator it = ed_wm->world_model()->begin(); it != ed_wm->world_model()->end(); ++it)
     {
-//        std::cout << it->first << std::endl;
-
         const ed::EntityConstPtr& e = *it;
         if (!req.id.empty() && e->id() != ed::UUID(req.id))
             continue;

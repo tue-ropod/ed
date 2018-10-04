@@ -11,6 +11,7 @@ class PropertyKeyDBEntry;
 template<typename T>
 struct PropertyKey
 {
+  public:
     PropertyKey() : idx(INVALID_IDX), entry(0) {}
     Idx idx;
 
