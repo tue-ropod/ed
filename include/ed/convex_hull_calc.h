@@ -16,6 +16,9 @@
 
 #include "problib/conversions.h"
 #include "problib/datatypes.h"
+#include "ed/termcolor.hpp"
+
+#include <sensor_msgs/LaserScan.h>
 
 namespace ed
 {
@@ -24,13 +27,15 @@ namespace tracking
 {
 
 // TODO: make many of variables below configurable/tunable in ED model descriptions?
-#define TIMEOUT_TIME 0.1 // [s]
-#define MAX_LINE_ERROR 0.05 // [m]  
-#define MIN_DISTANCE_CORNER_DETECTION 0.05 // [m]
-#define MIN_POINTS_LINEFIT 5 // [-]
-#define ARBITRARY_HEIGHT 0.03 //[m]
-#define ARBITRARY_DEPTH ARBITRARY_HEIGHT
-#define MARGIN_RECTANGLE_INTERCHANGE 30*M_PI/180 //[rad]
+#define TIMEOUT_TIME                    0.1             // [s]
+#define MAX_LINE_ERROR                  0.05            // [m]  
+#define MIN_DISTANCE_CORNER_DETECTION   0.05            // [m]
+#define MIN_POINTS_LINEFIT              5               // [-]
+#define ARBITRARY_HEIGHT                0.03            //[m]
+#define ARBITRARY_DEPTH                 ARBITRARY_HEIGHT
+#define MARGIN_RECTANGLE_INTERCHANGE    30*M_PI/180     //[rad]
+#define POINTS_TO_CHECK_CONFIDENCE      3               //[-]
+#define EPSILON                         1e-4            // [m]
 
 enum FITTINGMETHOD {
     NONE = 1,
@@ -204,6 +209,8 @@ void wrapToInterval ( float* alpha, float lowerBound, float upperBound );
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose );
 
 float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD, unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose);
+
+bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh );
 
 geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end );
 

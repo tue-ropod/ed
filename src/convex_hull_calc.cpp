@@ -7,6 +7,49 @@ namespace ed
 
 namespace tracking
 {
+void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
+{
+    float delta = upperBound - lowerBound;
+
+    if ( *alpha < lowerBound )
+    {
+        while ( *alpha < lowerBound )
+        {
+            *alpha += delta;
+        }
+    }
+    else if ( *alpha >= upperBound )
+    {
+        while ( *alpha >= upperBound )
+        {
+            *alpha -= delta;
+        }
+    }
+}
+
+template <typename T> int sgn(T val) 
+{
+    return (T(0) < val) - (val < T(0));
+}
+
+void unwrap (float *angleMeasured, float angleReference)
+{
+        // Rectangle is symmetric over pi-radians, so unwrap to pi
+        float diff = angleReference - *angleMeasured;
+        
+        int d = diff / (M_PI);
+        *angleMeasured += d*M_PI;
+        
+//         float r = fmod (diff,M_PI);
+        float r = angleReference - *angleMeasured;
+        
+        if( fabs(r) > M_PI_2 )
+        {
+                *angleMeasured += sgn(r)*M_PI;
+        }
+        
+//         std::cout << "Unwrap-function: diff = " << diff << " d = " << d << " r = " << r << std::endl;
+}
 
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
 {
@@ -57,15 +100,15 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
 
 float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
 {
-        std::cout << "Going to fit object with the following points: " << std::endl;
+//         std::cout << "Going to fit object with the following points: " << std::endl;
        
-        
+      /*  
         for ( std::vector<geo::Vec2f>::iterator it = *it_low; it != *it_high; ++it ) 
         {
                 geo::Vec2f point = *it;
                 std::cout << point << "\t ";
         }
-        std::cout << "\n";
+        std::cout << "\n";*/
         
         
     switch ( FITTINGMETHOD )
@@ -88,6 +131,58 @@ float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned 
     }
     }
     return false; // end reached without doing something
+}
+
+bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh )
+{
+        // ORIGINAL SENSOR RANGES SHOULD BE USED TODO CHECK
+        // TODO: confidence low/high should be compared to original data!
+        bool confidenceLeft = true, confidenceRight = true;
+        unsigned int num_beams = scan->ranges.size();
+
+        // TODO init i?
+        unsigned int nPointsToCheck = POINTS_TO_CHECK_CONFIDENCE;
+        
+        if ( elementLow < nPointsToCheck )
+        {
+                confidenceLeft = false; // Because we have no proof that the complete side of the object is observed
+        }
+        else
+        {
+                float rsToCheck = scan->ranges[elementLow];
+                for ( unsigned int l = elementLow - nPointsToCheck; confidenceLeft && l < elementLow; l++ )
+                {
+                    float rsToCompare = scan->ranges[l];
+//                     if ( rsToCheck > rsToCompare && rsToCompare >= 0 + EPSILON )
+                            if ( rsToCheck > rsToCompare && rsToCompare >= 0 + EPSILON )
+                    {
+                        confidenceLeft = false;
+                        return false;
+                    }
+                }
+        }
+        
+        if ( num_beams - elementHigh < nPointsToCheck )
+        {
+                confidenceRight = false;
+        }
+        else
+        {
+                float rsToCheck = scan->ranges[elementHigh];
+                
+                for ( unsigned int l = elementHigh; confidenceLeft && l < elementHigh + nPointsToCheck; l++ )
+                {
+                    float rsToCompare = scan->ranges[l];
+                    if ( rsToCheck > rsToCompare )
+//                     if ( rsToCheck > rsToCompare && rsToCompare >= 0 + EPSILON )
+                    {
+                        confidenceRight = false;
+                        return false;
+                    }
+                }     
+        }
+        
+        return true; // both confidenceLeft and confidenceRight are true
 }
 
 geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end )
@@ -314,8 +409,10 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float mean_error2 = fitLine ( points, beta_hat2, &it_split, &it_end );
 
     float x_start1 = points[0].x; // Is this correct in combination with theta?
-    float y_start1 = beta_hat1 ( 1 ) * x_start1 + beta_hat1 ( 0 );
+//     float y_start1 = beta_hat1 ( 1 ) * x_start1 + beta_hat1 ( 0 );
+    float y_start1 = points[0].y;
 
+// TODO what if a corner is not visible due to an occlusion? In that case, the corner point can not be taken into account for both sides
     //determine width and height
     float x_end = points[cornerIndex].x;
     float y_end = points[cornerIndex].y;
@@ -324,6 +421,13 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float dy = y_start1 - y_end;
     float width = sqrt ( dx*dx+dy*dy );
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
+    
+//     if(theta != theta)
+//     {
+//             std::cout << termcolor::red << "theta = " << theta << " beta_hat1 ( 1 ) = " << beta_hat1 ( 1 ) << std::endl;
+//     }
+//     std::cout << "theta = " << theta << " beta_hat1 ( 1 ) = " << beta_hat1 ( 1 ) << std::endl;
+//     std::cout << termcolor::magenta << "fitRectangle, line 1: start = " << x_start1 << ", " << y_start1  << " end = " << x_end << ", " << y_end << ", width = " << width << ", theta = " << theta << ", dx, dy = " << dx  << ", " << dy << termcolor::reset << std::endl;
     //wrapToInterval(&theta, 0, 2*M_PI); // atan2-function wraps theta on 0, 2pi already, right?
 
     float x_start2 = x_end;
@@ -335,12 +439,16 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     dx = x_end2 - x_start2;
     dy = y_start2 - y_end2;
     float depth = sqrt ( dx*dx+dy*dy );
+    
+    float thetaTest = atan2 ( beta_hat2 ( 1 ), 1 ); // TEMP
+//     std::cout << "thetatest = " << thetaTest << " beta_hat2 ( 1 ) = " << beta_hat2 ( 1 ) << std::endl;
+//     std::cout << termcolor::magenta << "fitRectangle, line 2: start = " << x_start2 << ", " << y_start2  << " end = " << x_end2 << ", " << y_end2 << ", depth = " << depth << ", dx, dy = " << dx  << ", " << dy <<  termcolor::reset << std::endl;
 
     float center_x = 0.5* ( x_start1 + x_end ) + 0.5* ( x_end2 - x_start2 );
     float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2 - y_start2 );
     
     float roll = 0.0, pitch = 0.0, yaw = theta;
-    std::cout << "fitRectangle: info = " << center_x << ", " << center_y << ", " << width << ", " << depth << std::endl;
+//     std::cout << "fitRectangle: info = " << center_x << ", " << center_y << ", " << width << ", " << depth << std::endl;
     rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
     unsigned int low_size = cornerIndex;
@@ -461,7 +569,7 @@ bool checkForSplit ( std::vector<geo::Vec2f>& points, unsigned int &ID,const geo
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )  //, unsigned int& index )
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
-std::cout << "Going to fit line with the following points: " << std::endl;
+// std::cout << "Going to fit line with the following points: " << std::endl;
     unsigned int size = std::distance ( *it_start, *it_end );
     Eigen::MatrixXf m ( size, 2 );
     Eigen::VectorXf y ( size );
@@ -479,7 +587,7 @@ std::cout << "Going to fit line with the following points: " << std::endl;
         m ( counter, 1 ) = ( double ) point.x;
         y ( counter ) = ( double ) point.y;
         counter++;
-        std::cout << point << "\t ";
+//         std::cout << point << "\t ";
     }
 
     Eigen::MatrixXf mt ( size, 2 );
@@ -529,7 +637,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
 
     float roll = 0.0, pitch = 0.0, yaw = theta;
     
-    std::cout << "setRectangularParametersForLine: info = " << center_x << ", " << center_y << ", " << width << std::endl;
+//     std::cout << "setRectangularParametersForLine: info = " << center_x << ", " << center_y << ", " << width << std::endl;
     
     rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
@@ -735,15 +843,15 @@ void Rectangle::interchangeRectangleFeatures()
         w_ = d_;
         d_ = widthOld;
         
-        yaw_ += M_PI_2;
+       yaw_ += M_PI_2;
 //         wrapToInterval(&yaw_, 0, 2*M_PI);
         
-//      matrix.block<p,q>(i,j) // Block of size (p,q), starting at (i,j)  
-//         std::cout << "P old = \n" << P_ << std::endl;
+//      matrix.block<p,q>(i,j) indicates a block of size (p,q), starting at (i,j)  
+//          std::cout << "P old = \n" << P_ << std::endl;
         Eigen::MatrixXf widthCovOld( 6, 1 );
         widthCovOld = P_.block< 1, 6 >( 6, 0 );
         
-//         std::cout << "widthCovOld = \n" << widthCovOld << std::endl;
+//          std::cout << "widthCovOld = \n" << widthCovOld << std::endl;
         
         P_.block< 1, 6 >( 6, 0 ) = P_.block< 1, 6 >( 7, 0 );
         P_.block< 6, 1 >( 0, 6 ) = P_.block< 1, 6 >( 7, 0 ).transpose(); // cause P is symmetric
@@ -755,51 +863,7 @@ void Rectangle::interchangeRectangleFeatures()
         P_ ( 6, 6 ) = P_( 7, 7 );
         P_( 7, 7 ) = P_6_6Old;
         
-//         std::cout << "P new = \n" << P_ << std::endl;    
-}
-
-void wrapToInterval ( float* alpha, float lowerBound, float upperBound )
-{
-    float delta = upperBound - lowerBound;
-
-    if ( *alpha < lowerBound )
-    {
-        while ( *alpha < lowerBound )
-        {
-            *alpha += delta;
-        }
-    }
-    else if ( *alpha >= upperBound )
-    {
-        while ( *alpha >= upperBound )
-        {
-            *alpha -= delta;
-        }
-    }
-
-}
-
-template <typename T> int sgn(T val) 
-{
-    return (T(0) < val) - (val < T(0));
-}
-
-void unwrap (float *angleMeasured, float angleReference)
-{
-        
-        float diff = angleReference - *angleMeasured;
-        
-        int d = diff / (2*M_PI);
-        float r = fmod (diff,2*M_PI);
-        
-        *angleMeasured += d*2*M_PI;
-        
-        if( fabs(r) > M_PI )
-        {
-                *angleMeasured += sgn(r)*2*M_PI;
-        }
-        
-//         std::cout << "Unwrap: diff, d, r = " << diff << ", " << d << ", " << r << std::endl;
+//          std::cout << "P new = \n" << P_ << std::endl;    
 }
 
 bool FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth )
@@ -917,7 +981,9 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
 // std::cout << "updateRectangleFeatures Test 2" << std::endl;
 
 // std::cout << "Update rectangle parameters wrapped measurement: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
+// std::cout << "Before unwrap: measured angle = " << z_k(2) << std::endl;
 unwrap( &z_k( 2 ), rectangle_.get_yaw() );
+// std::cout << "After unwrap: measured angle = " << z_k(2) << std::endl;
 
 // std::cout << "Update rectangle parameters unwrapped measurement: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
 // std::cout << "std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 )  = " << std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) ) - M_PI_2 )  << std::endl;
@@ -925,15 +991,17 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
     if( std::fabs( std::fabs( rectangle_.get_yaw() - z_k( 2 ) )- M_PI_2 ) < MARGIN_RECTANGLE_INTERCHANGE)
     {
 //             rectangle_.printValues();
-            rectangle_.interchangeRectangleFeatures();
-//             rectangle_.printValues();
+            rectangle_.interchangeRectangleFeatures( );
+            unwrap( &z_k( 2 ), rectangle_.get_yaw() );
+//             std::cout << "Rectangular properties after interchangeing of properties: " << std::endl;
+//              rectangle_.printValues();
             ROS_WARN( "Rectangle: interchange of feature-properties" );
     }
 
     Eigen::MatrixXf x_k_1_k_1 ( 8,1 );
     x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(),rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
 //       std::cout << "x_k_1_k_1 = \n" << x_k_1_k_1.transpose() << std::endl;
-//       std::cout << "Measurement = \n " << z_k.transpose() << std::endl;
+//        std::cout << "Measurement = \n " << z_k.transpose() << std::endl;
     
 // std::cout << "updateRectangleFeatures Test 3" << std::endl;
     Eigen::MatrixXf H ( 5, 8 );
@@ -950,7 +1018,7 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
 // std::cout << "updateRectangleFeatures Test 5" << std::endl;
     Eigen::MatrixXf x_k_k_1 = F*x_k_1_k_1;
 //     std::cout << "updateRectangleFeatures Test 6" << std::endl;
-    Eigen::MatrixXf P_k_k_1 = F* rectangle_.get_P() * F.transpose() + Q_k;
+    Eigen::MatrixXf P_k_k_1 = F* rectangle_.get_P() * F.transpose() + Q_k; // TODO Q_K seems to be correct, but for large variance the measurement is updated strongly as well
 // std::cout << "updateRectangleFeatures Test 7" << std::endl;
     Eigen::MatrixXf y_k = z_k - H*x_k_k_1;
 //     std::cout << "updateRectangleFeatures Test 8" << std::endl;
@@ -980,7 +1048,7 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
 
 void FeatureProperties::printProperties()
 {
-        std::cout << "Prob [circ, rect] = [" << featureProbabilities_.get_pCircle() << ", " << featureProbabilities_.get_pRectangle() << "]" << std::endl;
+//         std::cout << "Prob [circ, rect] = [" << featureProbabilities_.get_pCircle() << ", " << featureProbabilities_.get_pRectangle() << "]" << std::endl;
         rectangle_.printValues();
         circle_.printProperties();
 }
