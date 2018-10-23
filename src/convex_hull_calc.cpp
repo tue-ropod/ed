@@ -135,9 +135,7 @@ float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned 
 
 bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh )
 {
-        // ORIGINAL SENSOR RANGES SHOULD BE USED TODO CHECK
-        // TODO: confidence low/high should be compared to original data!
-        bool confidenceLeft = true, confidenceRight = true;
+//         bool confidenceLeft = true, confidenceRight = true;
         unsigned int num_beams = scan->ranges.size();
 
         // TODO init i?
@@ -145,18 +143,21 @@ bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, 
         
         if ( elementLow < nPointsToCheck )
         {
-                confidenceLeft = false; // Because we have no proof that the complete side of the object is observed
+//                 confidenceLeft = false; 
+                // Because we have no proof that the complete side of the object is observed
+                return false;
         }
         else
         {
                 float rsToCheck = scan->ranges[elementLow];
-                for ( unsigned int l = elementLow - nPointsToCheck; confidenceLeft && l < elementLow; l++ )
+                for ( unsigned int l = elementLow - nPointsToCheck; l < elementLow; l++ )
                 {
                     float rsToCompare = scan->ranges[l];
 //                     if ( rsToCheck > rsToCompare && rsToCompare >= 0 + EPSILON )
-                            if ( rsToCheck > rsToCompare && rsToCompare >= 0 + EPSILON )
+                    if ( rsToCheck > rsToCompare + LASER_ACCURACY && rsToCompare >= 0 + EPSILON )
                     {
-                        confidenceLeft = false;
+//                         confidenceLeft = false;
+//                         std::cout << "Confidence left = false" << std::endl;
                         return false;
                     }
                 }
@@ -164,23 +165,27 @@ bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, 
         
         if ( num_beams - elementHigh < nPointsToCheck )
         {
-                confidenceRight = false;
+//                 confidenceRight = false;
+                return false;
         }
         else
         {
                 float rsToCheck = scan->ranges[elementHigh];
                 
-                for ( unsigned int l = elementHigh; confidenceLeft && l < elementHigh + nPointsToCheck; l++ )
+                for ( unsigned int l = elementHigh; l < elementHigh + nPointsToCheck; l++ )
                 {
                     float rsToCompare = scan->ranges[l];
-                    if ( rsToCheck > rsToCompare )
+                    if ( rsToCheck > rsToCompare + LASER_ACCURACY)
 //                     if ( rsToCheck > rsToCompare && rsToCompare >= 0 + EPSILON )
                     {
-                        confidenceRight = false;
+//                         confidenceRight = false;
+//                         std::cout << "Confidence right = false" << std::endl;
                         return false;
                     }
                 }     
         }
+        
+//         std::cout << "Both confidence left and right = true" << std::endl;
         
         return true; // both confidenceLeft and confidenceRight are true
 }
@@ -680,7 +685,8 @@ void Rectangle::printValues ( )
     std::cout << " yawVel_ = "<< yawVel_;
     std::cout << " roll_ = "  << roll_;
     std::cout << " pitch_ = " << pitch_;
-    std::cout << " yaw_ = "   << yaw_ << std::endl;
+    std::cout << " yaw_ = "   << yaw_;
+    std::cout << " P_ = \n" << P_ << std::endl;
 }
 
 float Rectangle::predictX( float dt )
@@ -1043,6 +1049,8 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
     rectangle_.set_d ( x_k_k ( 7 ) );
 
     rectangle_.set_P ( P_k_k );
+    
+//     rectangle_.printValues();
 //     std::cout << "updateRectangleFeatures Finished" << std::endl;
 }
 

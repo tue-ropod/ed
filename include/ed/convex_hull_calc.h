@@ -31,11 +31,12 @@ namespace tracking
 #define MAX_LINE_ERROR                  0.05            // [m]  
 #define MIN_DISTANCE_CORNER_DETECTION   0.05            // [m]
 #define MIN_POINTS_LINEFIT              5               // [-]
-#define ARBITRARY_HEIGHT                0.03            //[m]
+#define ARBITRARY_HEIGHT                0.03            // [m]
 #define ARBITRARY_DEPTH                 ARBITRARY_HEIGHT
-#define MARGIN_RECTANGLE_INTERCHANGE    30*M_PI/180     //[rad]
-#define POINTS_TO_CHECK_CONFIDENCE      3               //[-]
+#define MARGIN_RECTANGLE_INTERCHANGE    30*M_PI/180     // [rad]
+#define POINTS_TO_CHECK_CONFIDENCE      3               // [-]
 #define EPSILON                         1e-4            // [m]
+#define LASER_ACCURACY                  0.05            // [m]
 
 enum FITTINGMETHOD {
     NONE = 1,
