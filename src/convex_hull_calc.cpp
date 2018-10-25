@@ -445,7 +445,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     dy = y_start2 - y_end2;
     float depth = sqrt ( dx*dx+dy*dy );
     
-    float thetaTest = atan2 ( beta_hat2 ( 1 ), 1 ); // TEMP
+//     float thetaTest = atan2 ( beta_hat2 ( 1 ), 1 ); // TEMP
 //     std::cout << "thetatest = " << thetaTest << " beta_hat2 ( 1 ) = " << beta_hat2 ( 1 ) << std::endl;
 //     std::cout << termcolor::magenta << "fitRectangle, line 2: start = " << x_start2 << ", " << y_start2  << " end = " << x_end2 << ", " << y_end2 << ", depth = " << depth << ", dx, dy = " << dx  << ", " << dy <<  termcolor::reset << std::endl;
 
@@ -1003,9 +1003,53 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
 //              rectangle_.printValues();
             ROS_WARN( "Rectangle: interchange of feature-properties" );
     }
+    
+    // TODO 2 stages: first determine the updated width en depth, then use this difference to do a change of coordinates in x and y. 
+    
+     // As there are model differences between the width and the depth of the entity and the latest measurement, the position information should be corrected for that
+                float thetaPred = rectangle_.get_yaw() + dt*rectangle_.get_yawVel();
+                float deltaWidth =  std::fabs( rectangle_.get_w() - z_k ( 3 ) ); //measuredProperty.getRectangle().get_w() );
+                float deltaDepth = std::fabs( rectangle_.get_d() - z_k ( 4 ) ); //measuredProperty.getRectangle().get_d() );
+                
+                std::cout << "Measured width and depth = " << z_k ( 3 ) << ", " << z_k ( 4 ) << std::endl;
+                
+//                 float thetaPredWrapped = thetaPred;
+//                 ed::tracking::wrapToInterval ( &thetaPredWrapped, 0.0, M_PI );
+                float st = std::sin( z_k( 2 ) );
+                float ct = std::cos( z_k( 2 ) );
+                
+                float mst = std::sin( -thetaPred );
+                float mct = std::cos( -thetaPred );
+                
+                // check in which direction the measured center-point falls in order to determine to right direction of correction in both x and y
+                float shiftedX = z_k ( 0 ) - rectangle_.get_x(); //measuredProperty.getRectangle().get_x()
+                float shiftedY = z_k ( 1 ) - rectangle_.get_y(); //measuredProperty.getRectangle().get_y()
+                
+                float rotatedX = shiftedX * mct - shiftedY * mst;
+                float rotatedY = shiftedX * mst + shiftedY * mct;
+                
+                int signX = (rotatedX < 0) ? -1 : (rotatedX > 0);
+                int signY = (rotatedY < 0) ? -1 : (rotatedY > 0);
+                
+                deltaWidth *= -signX;
+                deltaDepth *= -signY;
+                
+                float deltaX = deltaWidth * ct - deltaDepth * st;
+                float deltaY = deltaWidth * st + deltaDepth * ct;
 
+                 
+                std::cout << "deltaWidth = " << deltaWidth << ", deltaDepth = " << deltaDepth << ", shiftedX = " << shiftedX << ", shiftedY = " << shiftedY;
+                std::cout << " rotatedX = " << rotatedX << ", rotatedY = " << rotatedY << ", signX = " << signX << ", signY = " << signY << ", deltaX = " << deltaX << ", deltaY = " << deltaY << std::endl;
+                
+                
+                std::cout << "Position = " << rectangle_.get_x() << ", " << rectangle_.get_y() << std::endl;
+                std::cout << "Position Shifted = " << rectangle_.get_x() + 0.5*deltaX << ", " << rectangle_.get_y() + 0.5*deltaY << std::endl;
+                
+                z_k(0) += 0.5*deltaX;
+                z_k(1) += 0.5*deltaY;
+                
     Eigen::MatrixXf x_k_1_k_1 ( 8,1 );
-    x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(),rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
+    x_k_1_k_1 << rectangle_.get_x(), rectangle_.get_y(), rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel(), rectangle_.get_w(), rectangle_.get_d();
 //       std::cout << "x_k_1_k_1 = \n" << x_k_1_k_1.transpose() << std::endl;
 //        std::cout << "Measurement = \n " << z_k.transpose() << std::endl;
     
@@ -1024,7 +1068,7 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
 // std::cout << "updateRectangleFeatures Test 5" << std::endl;
     Eigen::MatrixXf x_k_k_1 = F*x_k_1_k_1;
 //     std::cout << "updateRectangleFeatures Test 6" << std::endl;
-    Eigen::MatrixXf P_k_k_1 = F* rectangle_.get_P() * F.transpose() + Q_k; // TODO Q_K seems to be correct, but for large variance the measurement is updated strongly as well
+    Eigen::MatrixXf P_k_k_1 = F* rectangle_.get_P() * F.transpose() + Q_k;
 // std::cout << "updateRectangleFeatures Test 7" << std::endl;
     Eigen::MatrixXf y_k = z_k - H*x_k_k_1;
 //     std::cout << "updateRectangleFeatures Test 8" << std::endl;
@@ -1050,7 +1094,7 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
 
     rectangle_.set_P ( P_k_k );
     
-//     rectangle_.printValues();
+    rectangle_.printValues();
 //     std::cout << "updateRectangleFeatures Finished" << std::endl;
 }
 
