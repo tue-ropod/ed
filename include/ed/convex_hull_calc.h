@@ -193,7 +193,7 @@ class Rectangle
 
 };
 
-void unwrap (float *angleMeasured, float angleReference);
+void unwrap (float *angleMeasured, float angleReference, float increment);
 
 float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, const geo::Pose3D& pose , unsigned int cornerIndex );
 

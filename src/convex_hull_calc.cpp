@@ -32,20 +32,20 @@ template <typename T> int sgn(T val)
     return (T(0) < val) - (val < T(0));
 }
 
-void unwrap (float *angleMeasured, float angleReference)
+void unwrap (float *angleMeasured, float angleReference, float increment)
 {
         // Rectangle is symmetric over pi-radians, so unwrap to pi
         float diff = angleReference - *angleMeasured;
         
-        int d = diff / (M_PI);
-        *angleMeasured += d*M_PI;
+        int d = diff / (increment);
+        *angleMeasured += d*increment;
         
-//         float r = fmod (diff,M_PI);
+//         float r = fmod (diff,increment);
         float r = angleReference - *angleMeasured;
         
-        if( fabs(r) > M_PI_2 )
+        if( fabs(r) > (0.5*increment) )
         {
-                *angleMeasured += sgn(r)*M_PI;
+                *angleMeasured += sgn(r)*increment;
         }
         
 //         std::cout << "Unwrap-function: diff = " << diff << " d = " << d << " r = " << r << std::endl;
@@ -157,7 +157,7 @@ bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, 
                     if ( rsToCheck > rsToCompare + LASER_ACCURACY && rsToCompare >= 0 + EPSILON )
                     {
 //                         confidenceLeft = false;
-//                         std::cout << "Confidence left = false" << std::endl;
+                        std::cout << "Confidence left = false" << std::endl;
                         return false;
                     }
                 }
@@ -175,11 +175,12 @@ bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, 
                 for ( unsigned int l = elementHigh; l < elementHigh + nPointsToCheck; l++ )
                 {
                     float rsToCompare = scan->ranges[l];
-                    if ( rsToCheck > rsToCompare + LASER_ACCURACY)
+//                     if ( rsToCheck > rsToCompare + LASER_ACCURACY)
+                     if ( rsToCheck > rsToCompare + LASER_ACCURACY && rsToCompare >= 0 + EPSILON )
 //                     if ( rsToCheck > rsToCompare && rsToCompare >= 0 + EPSILON )
                     {
 //                         confidenceRight = false;
-//                         std::cout << "Confidence right = false" << std::endl;
+                        std::cout << "Confidence right = false" << std::endl;
                         return false;
                     }
                 }     
@@ -988,7 +989,7 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
 
 // std::cout << "Update rectangle parameters wrapped measurement: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
 // std::cout << "Before unwrap: measured angle = " << z_k(2) << std::endl;
-unwrap( &z_k( 2 ), rectangle_.get_yaw() );
+unwrap( &z_k( 2 ), rectangle_.get_yaw(), M_PI );
 // std::cout << "After unwrap: measured angle = " << z_k(2) << std::endl;
 
 // std::cout << "Update rectangle parameters unwrapped measurement: rectangle_.get_yaw() = " << rectangle_.get_yaw() << ", z_k( 2 ) = " << z_k( 2 ) << std::endl;
@@ -998,7 +999,7 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
     {
 //             rectangle_.printValues();
             rectangle_.interchangeRectangleFeatures( );
-            unwrap( &z_k( 2 ), rectangle_.get_yaw() );
+            unwrap( &z_k( 2 ), rectangle_.get_yaw(), M_PI );
 //             std::cout << "Rectangular properties after interchangeing of properties: " << std::endl;
 //              rectangle_.printValues();
             ROS_WARN( "Rectangle: interchange of feature-properties" );
@@ -1011,7 +1012,7 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
                 float deltaWidth =  std::fabs( rectangle_.get_w() - z_k ( 3 ) ); //measuredProperty.getRectangle().get_w() );
                 float deltaDepth = std::fabs( rectangle_.get_d() - z_k ( 4 ) ); //measuredProperty.getRectangle().get_d() );
                 
-                std::cout << "Measured width and depth = " << z_k ( 3 ) << ", " << z_k ( 4 ) << std::endl;
+//                 std::cout << "Measured width and depth = " << z_k ( 3 ) << ", " << z_k ( 4 ) << std::endl;
                 
 //                 float thetaPredWrapped = thetaPred;
 //                 ed::tracking::wrapToInterval ( &thetaPredWrapped, 0.0, M_PI );
@@ -1038,12 +1039,12 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
                 float deltaY = deltaWidth * st + deltaDepth * ct;
 
                  
-                std::cout << "deltaWidth = " << deltaWidth << ", deltaDepth = " << deltaDepth << ", shiftedX = " << shiftedX << ", shiftedY = " << shiftedY;
-                std::cout << " rotatedX = " << rotatedX << ", rotatedY = " << rotatedY << ", signX = " << signX << ", signY = " << signY << ", deltaX = " << deltaX << ", deltaY = " << deltaY << std::endl;
+//                 std::cout << "deltaWidth = " << deltaWidth << ", deltaDepth = " << deltaDepth << ", shiftedX = " << shiftedX << ", shiftedY = " << shiftedY;
+//                 std::cout << " rotatedX = " << rotatedX << ", rotatedY = " << rotatedY << ", signX = " << signX << ", signY = " << signY << ", deltaX = " << deltaX << ", deltaY = " << deltaY << std::endl;
                 
                 
-                std::cout << "Position = " << rectangle_.get_x() << ", " << rectangle_.get_y() << std::endl;
-                std::cout << "Position Shifted = " << rectangle_.get_x() + 0.5*deltaX << ", " << rectangle_.get_y() + 0.5*deltaY << std::endl;
+//                 std::cout << "Position = " << rectangle_.get_x() << ", " << rectangle_.get_y() << std::endl;
+//                 std::cout << "Position Shifted = " << rectangle_.get_x() + 0.5*deltaX << ", " << rectangle_.get_y() + 0.5*deltaY << std::endl;
                 
                 z_k(0) += 0.5*deltaX;
                 z_k(1) += 0.5*deltaY;
@@ -1094,7 +1095,7 @@ unwrap( &z_k( 2 ), rectangle_.get_yaw() );
 
     rectangle_.set_P ( P_k_k );
     
-    rectangle_.printValues();
+//     rectangle_.printValues();
 //     std::cout << "updateRectangleFeatures Finished" << std::endl;
 }
 
