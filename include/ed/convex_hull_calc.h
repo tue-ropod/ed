@@ -128,7 +128,7 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* cirlce,
 class Rectangle
 {
         float x_, y_, z_, w_, d_, h_, roll_, pitch_, yaw_, xVel_, yVel_, yawVel_; // x, y of center, width, height and rotation of rectangle
-        Eigen::MatrixXf P_;
+        Eigen::MatrixXf P_, Pdim_;
   public:
     Rectangle();
     
@@ -148,6 +148,7 @@ class Rectangle
     float get_yVel()                    { return yVel_; } ;
     float get_yawVel()                  { return yawVel_; } ;
     Eigen::MatrixXf get_P()             { return P_; } ;
+    Eigen::MatrixXf get_Pdim()         { return Pdim_; } ;
     
     geo::Pose3D getPose() {geo::Pose3D pose(x_, y_, z_, roll_, pitch_,yaw_); return pose; };
     
@@ -164,6 +165,7 @@ class Rectangle
     void set_yVel       ( float yVel )          { yVel_  = yVel; } ;
     void set_yawVel     ( float yawVel )        { yawVel_  = yawVel; } ;
     void set_P          ( Eigen::MatrixXf P )   { P_     = P; } ;
+    void set_Pdim       ( Eigen::MatrixXf Pdim ){ Pdim_     = Pdim; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
     
@@ -188,9 +190,10 @@ class Rectangle
     void predictAndUpdatePos( float dt );
     
     void interchangeRectangleFeatures();
+    
+    Eigen::VectorXf setState( float posX, float posY, float posYaw, float xVel, float yVel, float yawVel, float width, float depth );
 
     void printValues();
-
 };
 
 void unwrap (float *angleMeasured, float angleReference, float increment);
@@ -201,7 +204,7 @@ bool findPossibleCorner ( std::vector< geo::Vec2f >& points, std::vector< unsign
 
 bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices );
 
-bool checkForSplit ( std::vector<geo::Vec2f>& points, unsigned int &ID,const geo::Pose3D& sensor_pose,  unsigned int cornerIndex );
+bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_pose,  unsigned int cornerIndex );
 
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end ) ;//, unsigned int& index);
 
@@ -216,6 +219,8 @@ float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD, unsigned i
 bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh );
 
 geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end );
+
+Eigen::MatrixXf kalmanUpdate(Eigen::MatrixXf F, Eigen::MatrixXf H, Eigen::MatrixXf *P, Eigen::MatrixXf x_k_1_k_1, Eigen::MatrixXf z_k, Eigen::MatrixXf Q, Eigen::MatrixXf R);
 
 // Probabilities
 class FeatureProbabilities
@@ -309,6 +314,8 @@ class FeatureProperties
     void updateCircleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::MatrixXf z_k, float dt);
     
     void updateRectangleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt);
+    
+    void correctPosForDimDiff(float deltaWidth, float deltaDepth, float *deltaX, float *deltaY, float dt, float yawMeasured);
     
     void printProperties();
 
