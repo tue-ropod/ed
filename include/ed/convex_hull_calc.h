@@ -61,34 +61,36 @@ public:
 class Circle
 {
     float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_, radius_; // x, y, z-positions, roll, pitch, yaw and radius of circle
-    Eigen::MatrixXf P_; // estimated covariance for state = [x, y, xVel, yVel, radius]^T
+    Eigen::MatrixXf P_, Pdim_; // estimated covariance for state = [x, y, xVel, yVel] ^T and the radius
     
   public:
     Circle();
     
     void setProperties ( float x, float y, float z, float roll, float pitch, float yaw, float radius );
     
-    float get_x()                             { return x_; } ;
-    float get_y()                             { return y_; } ;
-    float get_z()                             { return z_; } ;
-    float get_roll()                          { return roll_; } ;
-    float get_pitch()                         { return pitch_; } ;
-    float get_yaw()                           { return yaw_; } ;
-    float get_xVel()                          { return xVel_; } ;
-    float get_yVel()                          { return yVel_; } ;
-    float get_radius()                        { return radius_; } ;
-    Eigen::MatrixXf get_P()                   { return P_; } ;
+    float get_x()                                { return x_; } ;
+    float get_y()                                { return y_; } ;
+    float get_z()                                { return z_; } ;
+    float get_roll()                             { return roll_; } ;
+    float get_pitch()                            { return pitch_; } ;
+    float get_yaw()                              { return yaw_; } ;
+    float get_xVel()                             { return xVel_; } ;
+    float get_yVel()                             { return yVel_; } ;
+    float get_radius()                           { return radius_; } ;
+    Eigen::MatrixXf get_P()                      { return P_; } ;
+    Eigen::MatrixXf get_Pdim()                   { return Pdim_; } ;
     
-    void set_x          ( float x )           { x_     = x; } ;
-    void set_y          ( float y )           { y_     = y; } ;
-    void set_z          ( float z )           { z_     = z; } ;
-    void set_roll       ( float roll )        { roll_  = roll; } ;
-    void set_pitch      ( float pitch )       { pitch_ = pitch; } ;
-    void set_yaw        ( float yaw )         { yaw_   = yaw; } ;
-    void set_xVel       ( float xVel )        { xVel_  = xVel; } ;
-    void set_yVel       ( float yVel )        { yVel_  = yVel; } ;
-    void set_radius     ( float radius )      { radius_ = radius; } ;
-    void set_P          ( Eigen::MatrixXf P ) { P_ = P; } ;
+    void set_x          ( float x )              { x_     = x; } ;
+    void set_y          ( float y )              { y_     = y; } ;
+    void set_z          ( float z )              { z_     = z; } ;
+    void set_roll       ( float roll )           { roll_  = roll; } ;
+    void set_pitch      ( float pitch )          { pitch_ = pitch; } ;
+    void set_yaw        ( float yaw )            { yaw_   = yaw; } ;
+    void set_xVel       ( float xVel )           { xVel_  = xVel; } ;
+    void set_yVel       ( float yVel )           { yVel_  = yVel; } ;
+    void set_radius     ( float radius )         { radius_ = radius; } ;
+    void set_P          ( Eigen::MatrixXf P )    { P_ = P; } ;
+    void set_Pdim       ( Eigen::MatrixXf Pdim ) { Pdim_ = Pdim; } ;
 
     void setMarker ( visualization_msgs::Marker& marker, unsigned int ID );
     
@@ -143,12 +145,11 @@ class Rectangle
     float get_roll()                    { return roll_; } ;
     float get_pitch()                   { return pitch_; } ;
     float get_yaw()                     { return yaw_; } ;
-//     float get_theta()                   { return yaw_; }
     float get_xVel()                    { return xVel_; } ;
     float get_yVel()                    { return yVel_; } ;
     float get_yawVel()                  { return yawVel_; } ;
     Eigen::MatrixXf get_P()             { return P_; } ;
-    Eigen::MatrixXf get_Pdim()         { return Pdim_; } ;
+    Eigen::MatrixXf get_Pdim()          { return Pdim_; } ;
     
     geo::Pose3D getPose() {geo::Pose3D pose(x_, y_, z_, roll_, pitch_,yaw_); return pose; };
     
