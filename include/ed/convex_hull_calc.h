@@ -180,6 +180,10 @@ class Rectangle
     
     std::vector<geo::Vec2f> determineCorners( float associationDistance);
     
+    std::vector<geo::Vec2f> determineCenterpointsOfEdges ( );
+    
+//     std::vector<geo::Vec2f> determinePointsOfSquare ( float associationDistance, float rotation );
+    
     float predictX( float dt );
     
     float predictY( float dt );
@@ -189,6 +193,8 @@ class Rectangle
     void predictPos( float* predictedX, float* predictedY, float* predictedYaw, float dt );
     
     void predictAndUpdatePos( float dt );
+    
+    bool switchDimensions( float measuredYaw);
     
     void interchangeRectangleFeatures();
     
@@ -211,15 +217,19 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std:
 
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose );
 
-void wrapToInterval ( float* alpha, float lowerBound, float upperBound );
+void wrap2Interval ( float* alpha, float lowerBound, float upperBound );
 
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose );
 
 float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD, unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose);
 
-bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh );
+bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int element, bool elementLow);
+
+// bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh );
 
 geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end );
+
+geo::Vec2f projectPointOnLine(geo::Vec2f p1Line, geo::Vec2f p2Line, geo::Vec2f point2Project);
 
 Eigen::MatrixXf kalmanUpdate(Eigen::MatrixXf F, Eigen::MatrixXf H, Eigen::MatrixXf *P, Eigen::MatrixXf x_k_1_k_1, Eigen::MatrixXf z_k, Eigen::MatrixXf Q, Eigen::MatrixXf R);
 
