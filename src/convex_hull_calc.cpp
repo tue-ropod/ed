@@ -182,61 +182,6 @@ bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, uns
         }
 }
 
-// bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh )
-// {
-// //         unsigned int num_beams = scan->ranges.size();
-// //         unsigned int nPointsToCheck = POINTS_TO_CHECK_CONFIDENCE;
-// //         
-// //         if ( elementLow < nPointsToCheck )
-// //         {
-// //                 // Because we have no proof that the complete side of the object is observed
-// //                 return false;
-// //         }
-// //         else
-// //         {
-// //                 float rsToCheck = scan->ranges[elementLow];
-// //                 for ( unsigned int l = elementLow - nPointsToCheck; l < elementLow; l++ )
-// //                 {
-// //                     float rsToCompare = scan->ranges[l];
-// //                     if ( rsToCheck > rsToCompare + LASER_ACCURACY && rsToCompare >= 0 + EPSILON )
-// //                     {
-// //                         return false;
-// //                     }
-// //                 }
-// //         }
-// //         
-// //         if ( num_beams - elementHigh < nPointsToCheck )
-// //         {
-// //                 return false;
-// //         }
-// //         else
-// //         {
-// //                 float rsToCheck = scan->ranges[elementHigh];
-// //                 
-// //                 for ( unsigned int l = elementHigh; l < elementHigh + nPointsToCheck; l++ )
-// //                 {
-// //                     float rsToCompare = scan->ranges[l];
-// //                     if ( rsToCheck > rsToCompare + LASER_ACCURACY && rsToCompare >= 0 + EPSILON )
-// //                     {
-// //                         return false;
-// //                     }
-// //                 }     
-// //         }
-//         
-//         
-//         bool confidenceLow = determineCornerConfidence( scan, elementLow, true);
-//         bool confidenceHigh = determineCornerConfidence( scan, elementHigh, false);
-//         
-//         if( confidenceLow && confidenceHigh)
-//         {
-//                 return true; // both confidenceLeft and confidenceRight are true
-//         }
-//         else
-//         {
-//                 return false;
-//         }
-// }
-
 geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end )
 {
     geo::Vec2f avg_point;
@@ -498,9 +443,6 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float x_end = points[cornerIndex - 1].x;
     float y_end = points[cornerIndex - 1].y;
     
-//     float dx = x_start1 - x_end;
-//     float dy = y_start1 - y_end;
-//     float width = sqrt ( dx*dx+dy*dy ); // minimal width
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
 
     float x_start2 = points[cornerIndex + 1].x;
@@ -516,12 +458,9 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     // As we might have partial detection in both width and depth direction, ensure that the dimension and positions are corrected according to this
     float centerWidth_x = 0.5* ( x_start1 + x_end );
     float centerWidth_y = 0.5* ( y_start1 + y_end );
-//     std::cout << "centerWidth_x = " << centerWidth_x << " centerWidth_y " << centerWidth_y << std::endl;
     
     float centerDepth_x = 0.5* ( x_end2 + x_start2 );
     float centerDepth_y = 0.5* ( y_end2 + y_start2  );    
-    
-//     std::cout << "centerDepth_x = " << centerDepth_x << " centerDepth_y " << centerDepth_y << std::endl;
     
     geo::Vec2f p1Line, p2Line, point2Project;
     float ct = cos ( theta );
@@ -536,38 +475,22 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     point2Project.x = centerWidth_x;
     point2Project.y = centerWidth_y;
     
-//     std::cout << "p1Line = " << p1Line << " p2Line = " << p2Line << " point2Project" << point2Project << std::endl;
-    
     geo::Vec2f cornerPoint = projectPointOnLine( p1Line, p2Line, point2Project);
-    
-//     std::cout << "cornerPoint = " << cornerPoint << std::endl;
 
     float width = 2*( sqrt ( pow( centerWidth_x - cornerPoint.x, 2.0) + pow( centerWidth_y - cornerPoint.y, 2.0) ) ); 
     depth = 2*( sqrt ( pow( centerDepth_x - cornerPoint.x, 2.0) + pow( centerDepth_y - cornerPoint.y, 2.0) ) );
     
-//     std::cout << "Width = " << width << " depth = " << depth << std::endl;
-    
     float center_x = 0.5* ( x_start1 + x_end ) + 0.5* ( x_end2 - x_start2 ); // uncorrected
     float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2 - y_start2 );
-    
-    
-//     std::cout << "Uncorrected: center_x = " << center_x << " center_y = " << center_y << std::endl;
     
     float center_x_correctedPos = centerDepth_x + 0.5*width*ct;
     float center_y_correctedPos = centerDepth_y + 0.5*width*st;
     
-//      std::cout << "center_x_correctedPos = " << center_x_correctedPos << " center_y_correctedPos = " << center_y_correctedPos << std::endl;
-       
-    
     float center_x_correctedNeg = centerDepth_x - 0.5*width*ct;
     float center_y_correctedNeg = centerDepth_y - 0.5*width*st;
     
-//     std::cout << "center_x_correctedNeg = " << center_x_correctedNeg << " center_y_correctedNeg = " << center_y_correctedNeg << std::endl;
-    
     float dist2Pos = pow( center_x_correctedPos - center_x, 2.0) + pow( center_y_correctedPos - center_y, 2.0);
     float dist2Neg = pow( center_x_correctedNeg - center_x, 2.0) + pow( center_y_correctedNeg - center_y, 2.0);
-    
-//     std::cout << "dist2Pos = " << dist2Pos << " dist2Neg = " << dist2Neg << std::endl;
     
     if( dist2Pos < dist2Neg )
     {
@@ -580,8 +503,6 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
             center_y = center_y_correctedNeg;
     }
     
-//     std::cout << "Corrected: center_x = " << center_x << " center_y = " << center_y << std::endl;
-
     float roll = 0.0, pitch = 0.0, yaw = theta;
     rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
@@ -826,8 +747,6 @@ void Rectangle::printValues ( )
     std::cout << " roll_ = "  << roll_;
     std::cout << " pitch_ = " << pitch_;
     std::cout << " yaw_ = "   << yaw_;
-//     std::cout << " Pdim_ = \n" << Pdim_;
-//     std::cout << " P_ = \n" << P_ << std::endl;
 }
 
 float Rectangle::predictX( float dt )
@@ -975,13 +894,11 @@ std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance 
     corners.push_back ( corner3 );
 
     return corners;
-//     return Rectangle::determinePointsOfSquare( associationDistance , yaw_ );
 }
 
 std::vector<geo::Vec2f> Rectangle::determineCenterpointsOfEdges ( )
 {
         float rotWidth = yaw_ + M_PI_4;
-        
         float ct = cos ( rotWidth );
         float st = sin ( rotWidth );
         
@@ -993,53 +910,15 @@ std::vector<geo::Vec2f> Rectangle::determineCenterpointsOfEdges ( )
         length = 0.5*w_;
         geo::Vec2f corner2 (      x_ + ct* 0 - st* length, y_ + st* 0 + ct* length );
         geo::Vec2f corner3 (      x_ + ct* 0 - st*-length, y_ + st* 0 + ct* -length );
-        
-        
-//     float dx = 0.5* ( w_ + associationDistance ); // blow up for associations
-//     float dy = 0.5* ( d_ + associationDistance );
-// 
-//     float rot = yaw_ + M_PI_4;
-//     
-//     float ct = cos ( rot );
-//     float st = sin ( rot );
-// 
-//     geo::Vec2f originCorner ( x_ + ct*-dx + st* dy, y_ + st*-dx + ct*-dy ); // Rotation matrix
-//     geo::Vec2f corner1 (      x_ + ct* dx + st* dy, y_ + st* dx + ct*-dy );
-//     geo::Vec2f corner2 (      x_ + ct* dx - st* dy, y_ + st* dx + ct* dy );
-//     geo::Vec2f corner3 (      x_ + ct*-dx - st* dy, y_ + st*-dx + ct* dy );
-// 
-    std::vector< geo::Vec2f > corners;
-    corners.push_back ( originCorner );
-    corners.push_back ( corner1 );
-    corners.push_back ( corner2 );
-    corners.push_back ( corner3 );
 
-    return corners;
-        
+        std::vector< geo::Vec2f > corners;
+        corners.push_back ( originCorner );
+        corners.push_back ( corner1 );
+        corners.push_back ( corner2 );
+        corners.push_back ( corner3 );
+
+        return corners;  
 }
-
-// std::vector<geo::Vec2f> Rectangle::determinePointsOfSquare ( float associationDistance, float rotation )
-// {
-//     float dx = 0.5* ( w_ + associationDistance ); // blow up for associations
-//     float dy = 0.5* ( d_ + associationDistance );
-//     
-//     float ct = cos ( rotation );
-//     float st = sin ( rotation );
-// 
-//     geo::Vec2f originCorner ( x_ + ct*-dx + st* dy, y_ + st*-dx + ct*-dy ); // Rotation matrix
-//     geo::Vec2f corner1 (      x_ + ct* dx + st* dy, y_ + st* dx + ct*-dy );
-//     geo::Vec2f corner2 (      x_ + ct* dx - st* dy, y_ + st* dx + ct* dy );
-//     geo::Vec2f corner3 (      x_ + ct*-dx - st* dy, y_ + st*-dx + ct* dy );
-// 
-//     std::vector< geo::Vec2f > corners;
-//     corners.push_back ( originCorner );
-//     corners.push_back ( corner1 );
-//     corners.push_back ( corner2 );
-//     corners.push_back ( corner3 );
-// 
-//     return corners;
-// }
-
 
 bool Rectangle::switchDimensions( float measuredYaw)
 {
@@ -1164,8 +1043,8 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::Matri
 }
 
 void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt )
-// z = observation, dt is the time difference between the latest update and the new measurement
 {
+        // z = observation, dt is the time difference between the latest update and the new measurement
         // 2 stages: first determine the updated width en depth, then use this difference to update the position first in order to prevent ghost-velocities. 
         
         // conversion for general state to state for (1) the position and velocity state and (2) the dimension state
@@ -1193,74 +1072,69 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
         Eigen::MatrixXf Hdim ( 2, 2 );
         Hdim.setIdentity( Hdim.rows(), Hdim.cols() ); 
                 
-     unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), M_PI );
+        unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), M_PI );
 
-    if( rectangle_.switchDimensions( z_k( yaw_zRef ) ) )
-    {
-            rectangle_.interchangeRectangleFeatures( );
-            unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), M_PI ); 
-    }
-    
-    Eigen::MatrixXf Pdim = rectangle_.get_Pdim();
-    Eigen::MatrixXf x_k_1_k_1_dim( 2, 1 ), z_k_dim( 2, 1 );
-    x_k_1_k_1_dim << rectangle_.get_w(), rectangle_.get_d();
-    z_k_dim << z_k( width_zRef ), z_k( depth_zRef );
-    
-    Eigen::MatrixXf x_k_k_dim = kalmanUpdate(Fdim, Hdim, &Pdim, x_k_1_k_1_dim, z_k_dim, Q_k.block<2, 2>( 6, 6 ), R_k.block<2, 2>( 3, 3 ) );
-    
-    // Correct position for changes caused by a change in dimension
-    float deltaWidth = x_k_k_dim( width_dimRef ) - x_k_1_k_1_dim ( width_dimRef );
-    float deltaDepth = x_k_k_dim( depth_dimRef ) - x_k_1_k_1_dim ( depth_dimRef );
-    
-    float deltaX_dim, deltaY_dim;
-    correctPosForDimDiff(deltaWidth, deltaDepth, &deltaX_dim, &deltaY_dim, dt, z_k( yaw_zRef ) );
-    
-    std::cout << "Correct position for changes caused by a change in dimension: deltaX_dim = " << deltaX_dim << ", deltaY_dim = " << deltaY_dim << std::endl;
-    
-    // What would the previous position of the measurement be given the velocities already estimated?
-    float ZPrevX = z_k( x_zRef ) - rectangle_.get_xVel()*dt;
-    float ZPrevY = z_k( y_zRef ) - rectangle_.get_yVel()*dt;
-    
-    // Determine the direction of the correction based on an estimation of the position of the measurement at the previous timestamp
-    int signX = ( std::fabs( rectangle_.get_x() + deltaX_dim - ZPrevX ) < std::fabs( rectangle_.get_x() - deltaX_dim - ZPrevX ) ) ? 1 : -1;
-    int signY = ( std::fabs( rectangle_.get_y() + deltaY_dim - ZPrevY ) < std::fabs( rectangle_.get_y() - deltaY_dim - ZPrevY ) ) ? 1 : -1;
-    
-    rectangle_.set_x ( rectangle_.get_x() + signX*deltaX_dim );
-    rectangle_.set_y ( rectangle_.get_y() + signY*deltaY_dim );
-    rectangle_.set_w ( x_k_k_dim ( width_dimRef ) );
-    rectangle_.set_d ( x_k_k_dim ( depth_dimRef ) );
-    
-    // Correct measured position caused by differences in modelled and measured dimensions
-    deltaWidth = rectangle_.get_w() - z_k ( width_zRef );
-    deltaDepth = rectangle_.get_d() - z_k ( depth_zRef );
-    
-    float deltaX_Vel, deltaY_Vel;
-    correctPosForDimDiff(deltaWidth, deltaDepth, &deltaX_Vel, &deltaY_Vel, dt, z_k( yaw_zRef ) );
-    std::cout << "CCorrect measured position caused by differences in modelled and measured dimensions = " << deltaX_Vel << ", deltaY_Vel = " << deltaY_Vel << std::endl;
-    signX = ( std::fabs( rectangle_.predictX( dt ) + deltaX_Vel - z_k( x_zRef ) ) < std::fabs( rectangle_.predictX( dt ) - deltaX_Vel - z_k( x_zRef ) ) ) ? 1 : -1;
-    signY = ( std::fabs( rectangle_.predictY( dt ) + deltaY_Vel - z_k( y_zRef ) ) < std::fabs( rectangle_.predictY( dt ) - deltaY_Vel - z_k( y_zRef ) ) ) ? 1 : -1;
-    
-    z_k ( x_zRef ) -= signX*deltaX_Vel;
-    z_k ( y_zRef ) -= signY*deltaY_Vel;
-    
-    Eigen::MatrixXf P = rectangle_.get_P();
-    Eigen::MatrixXf x_k_1_k_1_PosVel( 6, 1 ), z_k_posVel( 3, 1 );
-    x_k_1_k_1_PosVel << rectangle_.get_x(), rectangle_.get_y(), rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel();
-    z_k_posVel <<       z_k ( x_zRef ),     z_k ( y_zRef ),     z_k ( yaw_zRef );
-    
-    std::cout << "For kalman update:  Measuerd x, y, yaw = " << z_k_posVel << std::endl;
-    
-    Eigen::MatrixXf x_k_k_PosVel = kalmanUpdate(F_PosVel, H_PosVel, &P, x_k_1_k_1_PosVel, z_k_posVel, Q_k.block< 6, 6 >( 0, 0 ), R_k.block< 3, 3 >( 0, 0 ));
-    
-    rectangle_.set_x ( x_k_k_PosVel ( x_PosVelRef ) );
-    rectangle_.set_y ( x_k_k_PosVel ( y_PosVelRef ) );
-    rectangle_.set_yaw ( x_k_k_PosVel ( yaw_PosVelRef ) );
-    rectangle_.set_xVel ( x_k_k_PosVel ( xVel_PosVelRef ) );
-    rectangle_.set_yVel ( x_k_k_PosVel ( yVel_PosVelRef ) );
-    rectangle_.set_yawVel ( x_k_k_PosVel ( yawVel_PosVelRef ) );
+        if( rectangle_.switchDimensions( z_k( yaw_zRef ) ) )
+        {
+                rectangle_.interchangeRectangleFeatures( );
+                unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), M_PI ); 
+        }
+        
+        Eigen::MatrixXf Pdim = rectangle_.get_Pdim();
+        Eigen::MatrixXf x_k_1_k_1_dim( 2, 1 ), z_k_dim( 2, 1 );
+        x_k_1_k_1_dim << rectangle_.get_w(), rectangle_.get_d();
+        z_k_dim << z_k( width_zRef ), z_k( depth_zRef );
+        
+        Eigen::MatrixXf x_k_k_dim = kalmanUpdate(Fdim, Hdim, &Pdim, x_k_1_k_1_dim, z_k_dim, Q_k.block<2, 2>( 6, 6 ), R_k.block<2, 2>( 3, 3 ) );
+        
+        // Correct position for changes caused by a change in dimension
+        float deltaWidth = x_k_k_dim( width_dimRef ) - x_k_1_k_1_dim ( width_dimRef );
+        float deltaDepth = x_k_k_dim( depth_dimRef ) - x_k_1_k_1_dim ( depth_dimRef );
+        
+        float deltaX_dim, deltaY_dim;
+        correctPosForDimDiff(deltaWidth, deltaDepth, &deltaX_dim, &deltaY_dim, dt, z_k( yaw_zRef ) );
+        
+        // What would the previous position of the measurement be given the velocities already estimated?
+        float ZPrevX = z_k( x_zRef ) - rectangle_.get_xVel()*dt;
+        float ZPrevY = z_k( y_zRef ) - rectangle_.get_yVel()*dt;
+        
+        // Determine the direction of the correction based on an estimation of the position of the measurement at the previous timestamp
+        int signX = ( std::fabs( rectangle_.get_x() + deltaX_dim - ZPrevX ) < std::fabs( rectangle_.get_x() - deltaX_dim - ZPrevX ) ) ? 1 : -1;
+        int signY = ( std::fabs( rectangle_.get_y() + deltaY_dim - ZPrevY ) < std::fabs( rectangle_.get_y() - deltaY_dim - ZPrevY ) ) ? 1 : -1;
+        
+        rectangle_.set_x ( rectangle_.get_x() + signX*deltaX_dim );
+        rectangle_.set_y ( rectangle_.get_y() + signY*deltaY_dim );
+        rectangle_.set_w ( x_k_k_dim ( width_dimRef ) );
+        rectangle_.set_d ( x_k_k_dim ( depth_dimRef ) );
+        
+        // Correct measured position caused by differences in modelled and measured dimensions
+        deltaWidth = rectangle_.get_w() - z_k ( width_zRef );
+        deltaDepth = rectangle_.get_d() - z_k ( depth_zRef );
+        
+        float deltaX_Vel, deltaY_Vel;
+        correctPosForDimDiff(deltaWidth, deltaDepth, &deltaX_Vel, &deltaY_Vel, dt, z_k( yaw_zRef ) );
+        signX = ( std::fabs( rectangle_.predictX( dt ) + deltaX_Vel - z_k( x_zRef ) ) < std::fabs( rectangle_.predictX( dt ) - deltaX_Vel - z_k( x_zRef ) ) ) ? 1 : -1;
+        signY = ( std::fabs( rectangle_.predictY( dt ) + deltaY_Vel - z_k( y_zRef ) ) < std::fabs( rectangle_.predictY( dt ) - deltaY_Vel - z_k( y_zRef ) ) ) ? 1 : -1;
+        
+        z_k ( x_zRef ) -= signX*deltaX_Vel;
+        z_k ( y_zRef ) -= signY*deltaY_Vel;
+        
+        Eigen::MatrixXf P = rectangle_.get_P();
+        Eigen::MatrixXf x_k_1_k_1_PosVel( 6, 1 ), z_k_posVel( 3, 1 );
+        x_k_1_k_1_PosVel << rectangle_.get_x(), rectangle_.get_y(), rectangle_.get_yaw(), rectangle_.get_xVel(), rectangle_.get_yVel(), rectangle_.get_yawVel();
+        z_k_posVel <<       z_k ( x_zRef ),     z_k ( y_zRef ),     z_k ( yaw_zRef );
+        
+        Eigen::MatrixXf x_k_k_PosVel = kalmanUpdate(F_PosVel, H_PosVel, &P, x_k_1_k_1_PosVel, z_k_posVel, Q_k.block< 6, 6 >( 0, 0 ), R_k.block< 3, 3 >( 0, 0 ));
+        
+        rectangle_.set_x ( x_k_k_PosVel ( x_PosVelRef ) );
+        rectangle_.set_y ( x_k_k_PosVel ( y_PosVelRef ) );
+        rectangle_.set_yaw ( x_k_k_PosVel ( yaw_PosVelRef ) );
+        rectangle_.set_xVel ( x_k_k_PosVel ( xVel_PosVelRef ) );
+        rectangle_.set_yVel ( x_k_k_PosVel ( yVel_PosVelRef ) );
+        rectangle_.set_yawVel ( x_k_k_PosVel ( yawVel_PosVelRef ) );
 
-    rectangle_.set_P ( P );
-    rectangle_.set_Pdim( Pdim );
+        rectangle_.set_P ( P );
+        rectangle_.set_Pdim( Pdim );
 }
 
 void FeatureProperties::correctPosForDimDiff(float deltaWidth, float deltaDepth, float *deltaX, float *deltaY, float dt, float yawMeasured)
