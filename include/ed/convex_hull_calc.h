@@ -200,7 +200,7 @@ class Rectangle
     
     Eigen::VectorXf setState( float posX, float posY, float posYaw, float xVel, float yVel, float yawVel, float width, float depth );
 
-    void printValues();
+    void printProperties();
 };
 
 void unwrap (float *angleMeasured, float angleReference, float increment);
@@ -324,9 +324,11 @@ class FeatureProperties
     
     void updateCircleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::MatrixXf z_k, float dt);
     
-    void updateRectangleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt);
+    void updateRectangleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt, const geo::Pose3D& sensor_pose);
     
-    void correctPosForDimDiff(float deltaWidth, float deltaDepth, float *deltaX, float *deltaY, float dt, float yawMeasured);
+    void correctForDimensions( float deltaWidth, float deltaDepth, float* xMeasured, float* yMeasured, const geo::Pose3D& sensor_pose, float dt );
+    
+    void correctPosForDimDiff(float deltaWidth, float deltaDepth, float *deltaX, float *deltaY, float dt);
     
     void printProperties();
 
