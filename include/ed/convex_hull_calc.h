@@ -19,6 +19,7 @@
 #include "ed/termcolor.hpp"
 
 #include <sensor_msgs/LaserScan.h>
+#include <geolib/sensors/LaserRangeFinder.h>
 
 namespace ed
 {
@@ -203,7 +204,30 @@ class Rectangle
     void printProperties();
 };
 
-void unwrap (float *angleMeasured, float angleReference, float increment);
+template <typename T> 
+int sgn(T val) 
+{
+    return (T(0) < val) - (val < T(0));
+}
+
+template <typename T> 
+void unwrap (T *angleMeasured, T angleReference, T increment)
+{
+        // Rectangle is symmetric over pi-radians, so unwrap to pi
+        T diff = angleReference - *angleMeasured;
+        
+        int d = diff / (increment);
+        *angleMeasured += d*increment;
+        
+        T r = angleReference - *angleMeasured;
+        
+        if( fabs(r) > (0.5*increment) )
+        {
+                *angleMeasured += sgn(r)*increment;
+        }
+}
+
+void determineIAV(std::vector<float> ranges, float* mean, float* standardDeviation, geo::LaserRangeFinder lrf_model, unsigned int firstElement, unsigned int finalElement );
 
 float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, const geo::Pose3D& pose , unsigned int cornerIndex );
 
@@ -217,7 +241,26 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std:
 
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose );
 
-void wrap2Interval ( float* alpha, float lowerBound, float upperBound );
+template<typename T>
+void wrap2Interval ( T* alpha, T lowerBound, T upperBound )
+{
+    T delta = upperBound - lowerBound;
+
+    if ( *alpha < lowerBound )
+    {
+        while ( *alpha < lowerBound )
+        {
+            *alpha += delta;
+        }
+    }
+    else if ( *alpha >= upperBound )
+    {
+        while ( *alpha >= upperBound )
+        {
+            *alpha -= delta;
+        }
+    }
+}
 
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose );
 

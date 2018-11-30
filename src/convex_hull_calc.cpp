@@ -7,45 +7,55 @@ namespace ed
 
 namespace tracking
 {
-void wrap2Interval ( float* alpha, float lowerBound, float upperBound )
+// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.75.5153&rep=rep1&type=pdf
+void determineIAV(std::vector<float> ranges, float* mean, float* standardDeviation, geo::LaserRangeFinder lrf_model, unsigned int firstElement, unsigned int finalElement )
+ // Internal Angle Variance
 {
-    float delta = upperBound - lowerBound;
-
-    if ( *alpha < lowerBound )
-    {
-        while ( *alpha < lowerBound )
-        {
-            *alpha += delta;
-        }
-    }
-    else if ( *alpha >= upperBound )
-    {
-        while ( *alpha >= upperBound )
-        {
-            *alpha -= delta;
-        }
-    }
-}
-
-template <typename T> int sgn(T val) 
-{
-    return (T(0) < val) - (val < T(0));
-}
-
-void unwrap (float *angleMeasured, float angleReference, float increment)
-{
-        // Rectangle is symmetric over pi-radians, so unwrap to pi
-        float diff = angleReference - *angleMeasured;
+        geo::Vec2f A, C;
         
-        int d = diff / (increment);
-        *angleMeasured += d*increment;
+        float angle = lrf_model.getAngleMin() + lrf_model.getAngleIncrement()*firstElement;
+        A.x = ranges[firstElement]*cos(angle);
+        A.y = ranges[firstElement]*sin(angle);
         
-        float r = angleReference - *angleMeasured;
+        angle = lrf_model.getAngleMin() + lrf_model.getAngleIncrement()*finalElement;
+        C.x = ranges[finalElement]*cos(angle);
+        C.y = ranges[finalElement]*sin(angle);
         
-        if( fabs(r) > (0.5*increment) )
+        std::vector <float> inscribedAngles(finalElement - firstElement - 2, 0.0);
+        unsigned int counter = 0;
+        *mean = 0.0;
+        
+        for( unsigned int ii = firstElement + 1; ii < finalElement - 1; ii++ )
         {
-                *angleMeasured += sgn(r)*increment;
+                geo::Vec2f B;
+                
+                angle = lrf_model.getAngleMin() + lrf_model.getAngleIncrement()*ii;
+                B.x = ranges[ii]*cos(angle);
+                B.y = ranges[ii]*sin(angle);
+                
+                float a2 = pow( B.x-C.x, 2.0 ) + pow( B.y-C.y, 2.0 );
+                float b2 = pow( A.x-C.x, 2.0 ) + pow( A.y-C.y, 2.0 );
+                float c2 =  pow( A.x-B.x, 2.0 ) + pow( A.y-B.y, 2.0 );
+                
+                float a = sqrt ( a2 );
+                float c = sqrt ( c2 );
+                
+                inscribedAngles[counter] = acos( (b2 - a2 - c2) / (-2*a*c) );
+                *mean += inscribedAngles[counter];
+                counter++;    
         }
+        *mean /= counter;
+        
+        counter = 0;
+        *standardDeviation = 0.0;
+        
+        for( unsigned int ii = firstElement + 1; ii < finalElement - 1; ii++ )
+        {
+                *standardDeviation += std::pow( inscribedAngles[counter] - *mean, 2.0 );
+                counter++;    
+        }
+        
+        *standardDeviation = std::sqrt( *standardDeviation / counter );
 }
 
 FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
@@ -636,7 +646,7 @@ bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_
     }
 }
 
-float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )  //, unsigned int& index )
+float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
     unsigned int size = std::distance ( *it_start, *it_end );
@@ -1072,12 +1082,12 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
         Eigen::MatrixXf Hdim ( 2, 2 );
         Hdim.setIdentity( Hdim.rows(), Hdim.cols() ); 
                 
-        unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), M_PI );
+        unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), (float) M_PI );
 
         if( rectangle_.switchDimensions( z_k( yaw_zRef ) ) )
         {
                 rectangle_.interchangeRectangleFeatures( );
-                unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), M_PI ); 
+                unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), (float) M_PI ); 
         }
         
         Eigen::MatrixXf Pdim = rectangle_.get_Pdim();
@@ -1111,7 +1121,7 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
        float deltaX = 0.0, deltaY = 0.0;
        correctForDimensions( deltaWidth, deltaDepth, &deltaX, &deltaY, sensor_pose, dt );
        
-        std::cout << "Delta x dim = " << deltaX << "Delta y dim = " << deltaY << std::endl;
+//         std::cout << "Delta x dim = " << deltaX << "Delta y dim = " << deltaY << std::endl;
         
         rectangle_.set_x ( rectangle_.get_x() + deltaX );
         rectangle_.set_y ( rectangle_.get_y() + deltaY );
@@ -1125,7 +1135,7 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
         
         correctForDimensions( deltaWidth, deltaDepth, &z_k( x_zRef ), &z_k( y_zRef ), sensor_pose, dt );
         
-        std::cout << "Delta x meas dim = " << deltaWidth << " Delta y dim = " << deltaDepth << std::endl;
+//         std::cout << "Delta x meas dim = " << deltaWidth << " Delta y dim = " << deltaDepth << std::endl;
 //         std::cout << "signWidth = " << signWidth << " signWidth = " << signDepth << std::endl;
 //         std::cout << "deltaX_VelWidth = " << deltaX_VelWidth << " deltaX_VelWidth = " << deltaX_VelWidth << std::endl;
 //         std::cout << "deltaX_VelDepth = " << deltaX_VelDepth << " deltaY_VelDepth = " << deltaY_VelDepth << std::endl;
