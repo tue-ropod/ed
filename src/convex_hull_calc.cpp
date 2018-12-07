@@ -529,19 +529,57 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned 
 
     geo::Vec2f startPoint = **it_start;
     geo::Vec2f endPoint = * ( *it_end - 1 );
+    
+//     std::cout << "startPoint = " << startPoint << " endPoint = " << endPoint << std::endl;
 
-    float a = endPoint.y-startPoint.y;
-    float b = endPoint.x-startPoint.x;
-    float c = endPoint.x*startPoint.y-endPoint.y*startPoint.x;
+//     float a = endPoint.y-startPoint.y;
+//     float b = endPoint.x-startPoint.x;
+//     float c = endPoint.x*startPoint.y-endPoint.y*startPoint.x;
 
-    float length = sqrt ( pow ( a,2.0 ) + pow ( b,2.0 ) );
+//     float length = sqrt ( pow ( a,2.0 ) + pow ( b,2.0 ) );
+    
+//     std::cout << "a, b, c = " << a << b << c << " length = " << length << std::endl;
+    
+    
+    float x1 = startPoint.x;
+    float y1 = startPoint.y;
+    
+    float x2 = endPoint.x;
+    float y2 = endPoint.y;
+    
 
     // See https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+//     std::cout << " in function: ";
+//     for ( std::vector<geo::Vec2f>::iterator it = *it_start + 1; it != *it_end - 1; ++it ) 
+//     {
+// 
+//         geo::Vec2f point = *it;
+// //         std::cout << point << ", " << std::endl;
+//         float distance = fabs ( a* ( point.x )-b* ( point.y ) +c ) / length;
+//         
+//         std::cout << "For point " << point << " distance = " << distance << "\t";
+// 
+//         if ( distance > maxDistance ) 
+//         {
+//             maxDistance = distance;
+//             ID = std::distance ( points.begin(), it );
+//         }
+//     }
+    
+    float length = sqrt ( pow ( y2 - y1,2.0 ) + pow ( x2 - x1,2.0 ) );    
+    
     for ( std::vector<geo::Vec2f>::iterator it = *it_start + 1; it != *it_end - 1; ++it ) 
     {
 
         geo::Vec2f point = *it;
-        float distance = fabs ( a* ( point.x )-b* ( point.y ) +c ) / length;
+//         std::cout << point << ", " << std::endl;
+        
+        float x0 = point.x;
+        float y0 = point.y;
+        
+        float distance = fabs ( (y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1 ) / length;
+        
+//         std::cout << "For point " << point << " distance = " << distance << "\t";
 
         if ( distance > maxDistance ) 
         {
@@ -550,6 +588,9 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned 
         }
     }
 
+
+//     std::cout << "maxDistance = " << maxDistance << " at ID = " << ID << " gives point " << points[ID] << std::endl;
+    
     if ( maxDistance >  MIN_DISTANCE_CORNER_DETECTION ) 
     {
         IDs->push_back ( ID );
