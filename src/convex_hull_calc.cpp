@@ -192,6 +192,73 @@ bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, uns
         }
 }
 
+int maxCrossCorrelation(std::vector<float>& measuredRanges, std::vector<unsigned int>::iterator measuredRangesStartElement,  std::vector<unsigned int>::iterator measuredRangesFinalElement,
+                        std::vector<float>& modelledRanges, std::vector<unsigned int>::iterator modelledRangesStartElement,  std::vector<unsigned int>::iterator modelledRangesFinalElement)
+{
+//         std::vector< float > crossCorrelation = 2*(modelledRanges.size() - 1) + modelledRanges.size();
+        unsigned int nModelledRanges = std::distance(modelledRangesStartElement, modelledRangesFinalElement);
+//         unsigned int nMeasuredRanges = std::distance(*measuredRangesStartElement, *measuredRangesFinalElement);
+        
+        unsigned int nIterations = 2*(nModelledRanges - 1);
+        int delta = -nModelledRanges + 1;
+        
+        float maxCorrelation = std::numeric_limits<float>::infinity();
+//         float maxCorrelation = 0.0;
+        int deltaOptimal = 0;
+        
+        std::cout << "nIterations = " << nIterations;
+        
+        std::cout << "deltaStart = " << delta << std::endl;
+        
+        for (unsigned int ii = 0; ii < nIterations; ii++)
+        {
+                float crossCorrelation = 0.0;
+//                 unsigned int counter = 0;
+                for(std::vector<unsigned int>::iterator it = measuredRangesStartElement; it != measuredRangesFinalElement; it++)
+                {
+                        float modelledRange, measuredRange;
+                        unsigned int element = *it;
+                        
+                        measuredRange = measuredRanges[element];
+                        int modelledElement = element + delta;
+                        if(modelledElement < 0 || modelledElement > measuredRanges.size() )
+                        {
+                                modelledRange = 0.0; 
+                        }
+                        else 
+                        {
+//                                 std::vector<float>::iterator modelledRangeIt = *modelledRangesStartElement;
+//                                 modelledRangeIt += modelledElement;
+//                             modelledRange = *modelledRangeIt;
+                            
+                            modelledRange = modelledRanges[modelledElement];
+                        }
+
+                        crossCorrelation += std::pow(modelledRange-measuredRange, 2.0);
+//                         counter++;
+                }
+                
+//                 std::vector<geo::Vec2f>::iterator it = *it_start;
+//     geo::Vec2f point_start = *it;
+//     it = *it_end; it--;
+//     geo::Vec2f point_end = *it;
+
+// std::cout << " crossCorrelation = " << crossCorrelation << " for delta = " << delta << "\t";
+                
+                if( crossCorrelation < maxCorrelation )
+                {
+                        maxCorrelation = crossCorrelation;
+                        deltaOptimal = delta;
+                }
+                
+                delta++;
+        }
+        
+        
+        std::cout << " maxCorrelation = " << maxCorrelation << " corresp. to delta = " << deltaOptimal << " deltaEnd = " << delta - 1 << std::endl;
+        return deltaOptimal;
+}
+
 geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const_iterator it_start, std::vector<geo::Vec2f>::const_iterator it_end )
 {
     geo::Vec2f avg_point;
@@ -209,6 +276,10 @@ geo::Vec2f avg ( std::vector<geo::Vec2f>& points, std::vector<geo::Vec2f>::const
 
     return ( avg_point );
 }
+
+
+
+
 
 geo::Vec2f projectPointOnLine(geo::Vec2f p1Line, geo::Vec2f p2Line, geo::Vec2f point2Project)
 {
@@ -522,7 +593,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     return ( mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ); // average of error
 }
 
-bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *IDs, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )
+bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *IDs, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end, float minDistCornerDetection )
 {
     float maxDistance = 0.0;
     unsigned int ID = std::numeric_limits<unsigned int>::quiet_NaN();
@@ -591,7 +662,7 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned 
 
 //     std::cout << "maxDistance = " << maxDistance << " at ID = " << ID << " gives point " << points[ID] << std::endl;
     
-    if ( maxDistance >  MIN_DISTANCE_CORNER_DETECTION ) 
+    if ( maxDistance >  minDistCornerDetection ) 
     {
         IDs->push_back ( ID );
         return true;
@@ -603,7 +674,7 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned 
 
 }
 
-bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices )
+bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices, float minDistCornerDetection  )
 {
     // Check in section if a corner is present. If that is the case, split the data at this corner, and check for both parts if another corner is present.
     std::vector<laserSegments> segments;
@@ -611,7 +682,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
     std::vector<geo::Vec2f>::iterator it_start = points.begin();
     std::vector<geo::Vec2f>::iterator it_end = points.end();
 
-    if ( findPossibleCorner ( points, cornerIndices, &it_start, &it_end ) )
+    if ( findPossibleCorner ( points, cornerIndices, &it_start, &it_end, minDistCornerDetection ) )
     { // -1 because std::vector::end returns an iterators to one-past-the-end of the container. The element just before is then the last element in the vector.
         laserSegments segmentToAdd;
         segmentToAdd.begin = points.begin();
@@ -635,7 +706,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
             laserSegments laserSegment = segments[ii];
             geo::Vec2f pointEnd =  *laserSegment.end;
 
-            bool test = findPossibleCorner ( points, cornerIndices, &laserSegment.begin, &laserSegment.end );
+            bool test = findPossibleCorner ( points, cornerIndices, &laserSegment.begin, &laserSegment.end, minDistCornerDetection );
 
             if ( test ) 
             {

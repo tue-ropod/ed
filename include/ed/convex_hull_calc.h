@@ -28,9 +28,8 @@ namespace tracking
 {
 
 // TODO: make many of variables below configurable/tunable in ED model descriptions?
-#define TIMEOUT_TIME                    0.1             // [s]
+#define TIMEOUT_TIME                    0.5             // [s]
 #define MAX_LINE_ERROR                  0.05            // [m]  
-#define MIN_DISTANCE_CORNER_DETECTION   0.05            // [m]
 #define MIN_POINTS_LINEFIT              5               // [-]
 #define ARBITRARY_HEIGHT                0.03            // [m]
 #define ARBITRARY_DEPTH                 ARBITRARY_HEIGHT
@@ -229,11 +228,14 @@ void unwrap (T *angleMeasured, T angleReference, T increment)
 
 void determineIAV(std::vector<float> ranges, float* mean, float* standardDeviation, geo::LaserRangeFinder lrf_model, unsigned int firstElement, unsigned int finalElement );
 
+int maxCrossCorrelation(std::vector<float>& measuredRanges, std::vector<unsigned int>::iterator measuredRangesStartElement,  std::vector<unsigned int>::iterator measuredRangesFinalElement,
+                        std::vector<float>& modelledRanges, std::vector<unsigned int>::iterator modelledRangesStartElement,  std::vector<unsigned int>::iterator modelledRangesFinalElement);
+
 float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* rectangle, const geo::Pose3D& pose , unsigned int cornerIndex );
 
-bool findPossibleCorner ( std::vector< geo::Vec2f >& points, std::vector< unsigned int >* IDs, std::vector< geo::Vec2f >::iterator* it_start, std::vector< geo::Vec2f >::iterator* it_end );
+bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *IDs, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end, float minDistCornerDetection );
 
-bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices );
+bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices, float minDistCornerDetection );
 
 bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_pose,  unsigned int cornerIndex );
 
