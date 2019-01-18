@@ -371,7 +371,7 @@ class FeatureProperties
     
     void updateRectangleFeatures(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt, const geo::Pose3D& sensor_pose);
     
-    void correctForDimensions( float deltaWidth, float deltaDepth, float* xMeasured, float* yMeasured, const geo::Pose3D& sensor_pose, float dt );
+    void correctForDimensions( float deltaWidth, float deltaDepth, float* xMeasured, float* yMeasured, float measuredPosX, float measuredPosY, float modelledPosX, float modelledPosY,  float dt );
     
     void correctPosForDimDiff(float deltaWidth, float deltaDepth, float *deltaX, float *deltaY, float dt);
     
