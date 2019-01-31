@@ -10,6 +10,7 @@ namespace tracking
 // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.75.5153&rep=rep1&type=pdf
 void determineIAV(std::vector<float> ranges, float* mean, float* standardDeviation, geo::LaserRangeFinder lrf_model, unsigned int firstElement, unsigned int finalElement )
  // Internal Angle Variance
+// TODO used at the moment?
 {
         geo::Vec2f A, C;
         
@@ -564,6 +565,9 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float center_x = 0.5* ( x_start1 + x_end ) + 0.5* ( x_end2 - x_start2 ); // uncorrected
     float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2 - y_start2 );
     
+    
+    std::cout << termcolor::blue << "center_x, center_y = " << center_x << ", " << center_y << std::endl;
+    
     float center_x_correctedPos = centerDepth_x + 0.5*width*ct;
     float center_y_correctedPos = centerDepth_y + 0.5*width*st;
     
@@ -583,6 +587,8 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
             center_x = center_x_correctedNeg;
             center_y = center_y_correctedNeg;
     }
+    
+    std::cout << "center_x, center_y, corrected = " << center_x << ", " << center_y << termcolor::reset << std::endl;
     
     float roll = 0.0, pitch = 0.0, yaw = theta;
     rectangle->setValues ( center_x, center_y, pose.getOrigin().getZ(), width, depth, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
@@ -1069,6 +1075,7 @@ Eigen::VectorXf Rectangle::setState(float posX, float posY, float posYaw, float 
 
 bool FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth )
 {
+        // TODO improve
     if ( !std::isinf ( errorRectangleSquared ) || !std::isinf ( errorCircleSquared ) )
     {
         float probabilityScaling = 1.0;
@@ -1350,8 +1357,8 @@ void FeatureProperties::correctForDimensions( float deltaWidth, float deltaDepth
         float distPosDepth2 = pow( modelledPosX + deltaX_Depth - measuredPosX, 2.0 ) + pow( modelledPosY + deltaY_Depth - measuredPosY, 2.0 );
         float distNegDepth2 = pow( modelledPosX - deltaX_Depth - measuredPosX, 2.0 ) + pow( modelledPosY - deltaY_Depth - measuredPosY, 2.0 );
         
-        bool largerDistanceDesiredWidth = deltaWidth > 0 ? 1 : 0 ;
-        bool largerDistanceDesiredDepth = deltaDepth > 0 ? 1 : 0 ;
+//         bool largerDistanceDesiredWidth = deltaWidth > 0 ? 1 : 0 ;
+//         bool largerDistanceDesiredDepth = deltaDepth > 0 ? 1 : 0 ;
         
 //         int signWidth =  largerDistanceDesiredWidth && distPosWidth2 > distNegWidth2 || !largerDistanceDesiredWidth && distPosWidth2 <  distNegWidth2 ? 1 : -1;
 //         int signDepth =  largerDistanceDesiredDepth && distPosDepth2 > distNegDepth2 || !largerDistanceDesiredDepth && distPosDepth2 <  distNegDepth2 ? 1 : -1;
