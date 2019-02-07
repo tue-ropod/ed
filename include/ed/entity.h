@@ -132,11 +132,11 @@ public:
     template<typename T>
     const T* property(const PropertyKey<T>& key) const
     {
-//       std::cout << "Key = " << key.idx << std::endl;
+       std::cout << "Key = " << key.idx << std::endl;
         std::map<Idx, Property>::const_iterator it = properties_.find(key.idx);
         if (it == properties_.end())
 	{
-//             std::cout << "Entity not found" << std::endl; return 0;
+             std::cout << "Entity not found" << std::endl; return 0;
 	}
 
         const Property& p = it->second;
