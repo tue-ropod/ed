@@ -296,11 +296,14 @@ class FeatureProbabilities
     };
 
     float get_pRectangle() const {
-        return ( float ) pmf_.getProbability ( "Rectangle" );
+            double out = pmf_.getProbability ( "Rectangle" );
+        return ( float ) out;
     } ;
 
     float get_pCircle() const {
-        return ( float ) pmf_.getProbability ( "Circle" );
+            std::cout << "Feature prob: ptr = " << this << "\t";
+            double out = pmf_.getProbability ( "Circle" );
+        return ( float ) out;
     } ;
     bool setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleRadius, float typicalCorridorWidth );
 
@@ -323,10 +326,10 @@ class FeatureProperties
         featureProbabilities_.setProbabilities ( pRectangle_in, pCircle_in );
     };
 
-    FeatureProperties ( const FeatureProperties* other ) {
-        this->featureProbabilities_ = other->featureProbabilities_;
-        this->circle_ = other->circle_;
-        this->rectangle_ = other->rectangle_;
+    FeatureProperties ( const FeatureProperties* other ) {          
+       featureProbabilities_ = other->featureProbabilities_;
+       circle_ = other->circle_;
+       rectangle_ = other->rectangle_;
     };
 
     FeatureProbabilities getFeatureProbabilities() const {
@@ -342,7 +345,7 @@ class FeatureProperties
     };
 
     void updateProbabilities ( FeatureProbabilities featureProbabilities_in ) {
-        this->featureProbabilities_.update ( featureProbabilities_in );
+        featureProbabilities_.update ( featureProbabilities_in );
     };
 
     void setCircle ( Circle circle_in ) {
