@@ -37,6 +37,8 @@ namespace tracking
 #define POINTS_TO_CHECK_CONFIDENCE      3               // [-]
 #define EPSILON                         1e-4            // [m]
 #define LASER_ACCURACY                  0.05            // [m]
+#define MIN_PROB_OBJECT			0.10		// [-]
+
 
 enum FITTINGMETHOD {
     NONE = 1,
@@ -301,7 +303,7 @@ class FeatureProbabilities
     } ;
 
     float get_pCircle() const {
-            std::cout << "Feature prob: ptr = " << this << "\t";
+//            std::cout << "Feature prob: ptr = " << this << "\t";
             double out = pmf_.getProbability ( "Circle" );
         return ( float ) out;
     } ;

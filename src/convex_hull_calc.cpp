@@ -527,6 +527,9 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float y_end = points[cornerIndex - 1].y;
     
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
+    float theta2 = atan2 ( beta_hat2 ( 1 ), 1 ) + M_PI_2;
+    unwrap( &theta2, theta, (float) M_PI );
+    theta = 0.5*(theta + theta2);
 
     float x_start2 = points[cornerIndex + 1].x;
     float y_start2 = points[cornerIndex + 1].y;
@@ -567,7 +570,7 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float center_y = 0.5* ( y_start1 + y_end ) + 0.5* ( y_end2 - y_start2 );
     
     
-    std::cout << termcolor::blue << "center_x, center_y = " << center_x << ", " << center_y << std::endl;
+//    std::cout << termcolor::blue << "center_x, center_y = " << center_x << ", " << center_y << std::endl;
     
     float center_x_correctedPos = centerDepth_x + 0.5*width*ct;
     float center_y_correctedPos = centerDepth_y + 0.5*width*st;
@@ -1090,6 +1093,16 @@ bool FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSqu
 
         float sum = errorRectangleSquared + errorCircleSquared;
         float pCircle = probabilityScaling * errorRectangleSquared/sum;
+	if(pCircle < MIN_PROB_OBJECT) // smooth out prob such that recovery is easier
+	{
+		pCircle = MIN_PROB_OBJECT;
+	}
+	else if(pCircle > 1.0 - MIN_PROB_OBJECT)
+	{
+		pCircle = 1.0 - MIN_PROB_OBJECT;
+	}
+
+
         float pRectangle =  1.0 - pCircle;  // Only 2 objects now, so the sum of it equals 1
 
         pmf_.setProbability ( "Rectangle", pRectangle );
@@ -1226,7 +1239,7 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
         float deltaWidth = x_k_1_k_1_dim ( width_dimRef ) - x_k_k_dim( width_dimRef );
         float deltaDepth = x_k_1_k_1_dim ( depth_dimRef ) - x_k_k_dim( depth_dimRef );
         
-        std::cout << "deltaWidth, deltaDepth model = " << deltaWidth << ", " << deltaDepth << std::endl;
+//        std::cout << "deltaWidth, deltaDepth model = " << deltaWidth << ", " << deltaDepth << std::endl;
         
       /* 
         float deltaX_dim, deltaY_dim;
