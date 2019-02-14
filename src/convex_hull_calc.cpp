@@ -1130,6 +1130,22 @@ void FeatureProbabilities::update ( float pRectangle_measured, float pCircle_mea
     pmf_measured.setProbability ( "Circle", pCircle_measured );
 
     pmf_.update ( pmf_measured );
+    
+    float pCircle = pmf_.getProbability ( "Circle" );            
+    
+    if(pCircle < MIN_PROB_OBJECT) // smooth out prob such that recovery is easier
+    {
+            pCircle = MIN_PROB_OBJECT;
+    }
+    else if(pCircle > 1.0 - MIN_PROB_OBJECT)
+    {
+            pCircle = 1.0 - MIN_PROB_OBJECT;
+    }
+
+     float pRectangle =  1.0 - pCircle;  // Only 2 objects now, so the sum of it equals 1
+
+     pmf_.setProbability ( "Rectangle", pRectangle );
+     pmf_.setProbability ( "Circle", pCircle );
 }
 
 void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_in )
