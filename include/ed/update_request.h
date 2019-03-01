@@ -142,6 +142,9 @@ public:
         p.entry = key.entry;
         p.value = value;
         flagUpdated(id);
+        
+//         std::cout << "Ent updated. Id = " << id << std::endl;
+
     }
 
     void setProperty(const UUID& id, const PropertyKeyDBEntry* entry, const ed::Variant& v)

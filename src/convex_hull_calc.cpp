@@ -404,7 +404,7 @@ void Circle::printProperties ( )
     std::cout << " yaw_ = " << yaw_;
     std::cout << " radius = " << radius_ ;
     std::cout << " P_ = " << P_;
-    std::cout << "Pdim_ = " << Pdim_ << std::endl;
+//     std::cout << "Pdim_ = " << Pdim_ << std::endl;
 }
 
 void Circle::setMarker ( visualization_msgs::Marker& marker , unsigned int ID )
@@ -1238,6 +1238,8 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
         {
                 rectangle_.interchangeRectangleFeatures( );
                 unwrap( &z_k( yaw_zRef ), rectangle_.get_yaw(), (float) M_PI ); 
+                
+                ROS_WARN("Interchanged rectangular features");
         }
         
         Eigen::MatrixXf Pdim = rectangle_.get_Pdim();
@@ -1274,6 +1276,7 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
         
        float deltaX = 0.0, deltaY = 0.0;
        correctForDimensions( deltaWidth, deltaDepth, &deltaX, &deltaY, z_k( x_zRef ), z_k( y_zRef ), rectangle_.get_x(), rectangle_.get_y(), dt );
+//        std::cout << "Delta x meas dim = " << deltaWidth << " Delta y dim = " << deltaDepth << " deltaX, Y = " << deltaX << ", " << deltaY << std::endl;
       
 //        std::cout << "Rect pos before first update = " << rectangle_.get_x() << ", " << rectangle_.get_y() << std::endl;
 //        std::cout << "Delta x dim = " << deltaX << "Delta y dim = " << deltaY << std::endl;
@@ -1294,19 +1297,19 @@ void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::Ma
         deltaDepth = z_k ( depth_zRef ) - rectangle_.get_d();
         
         // Correct measured pos due to diff in model & measurement
- //       std::cout << "z_k( x_zRef ), z_k( y_zRef ) before = " << z_k( x_zRef ) << ", " << z_k( y_zRef ) << std::endl;
- //       std::cout << "deltaWidth, deltaDepth = " << deltaWidth << ", " << deltaDepth << std::endl;
+//        std::cout << "z_k( x_zRef ), z_k( y_zRef ) before = " << z_k( x_zRef ) << ", " << z_k( y_zRef );// << std::endl;
+//        std::cout << " deltaWidth, deltaDepth = " << deltaWidth << ", " << deltaDepth << std::endl;
         
         deltaX = 0.0; deltaY = 0.0;
         correctForDimensions( deltaWidth, deltaDepth, &deltaX, &deltaY, z_k( x_zRef ), z_k( y_zRef ), rectangle_.get_x(), rectangle_.get_y(), dt );
-        
+//         std::cout << "Delta x meas dim = " << deltaWidth << " Delta y dim = " << deltaDepth << " deltaX, Y = " << deltaX << ", " << deltaY << std::endl;
  //       std::cout << "Out of func: deltaX, deltaY = " << deltaX << ", " << deltaY << std::endl;
         
         z_k( x_zRef ) = z_k( x_zRef ) - deltaX;
         z_k( y_zRef ) = z_k( y_zRef ) - deltaY;
  //       std::cout << "z_k( x_zRef ), z_k( y_zRef ) after = " << z_k( x_zRef ) << ", " << z_k( y_zRef ) << std::endl;
         
-//         std::cout << "Delta x meas dim = " << deltaWidth << " Delta y dim = " << deltaDepth << std::endl;
+        
 //         std::cout << "signWidth = " << signWidth << " signWidth = " << signDepth << std::endl;
 //         std::cout << "deltaX_VelWidth = " << deltaX_VelWidth << " deltaX_VelWidth = " << deltaX_VelWidth << std::endl;
 //         std::cout << "deltaX_VelDepth = " << deltaX_VelDepth << " deltaY_VelDepth = " << deltaY_VelDepth << std::endl;
@@ -1395,10 +1398,17 @@ void FeatureProperties::correctForDimensions( float deltaWidth, float deltaDepth
 //         int signDepth =  largerDistanceDesiredDepth && distPosDepth2 > distNegDepth2 || !largerDistanceDesiredDepth && distPosDepth2 <  distNegDepth2 ? 1 : -1;
         
         int signWidth =  distPosWidth2 < distNegWidth2 ? 1 : -1;
-        int signDepth =  distPosDepth2 < distNegWidth2 ? 1 : -1;
+        int signDepth =  distPosDepth2 < distNegDepth2 ? 1 : -1;
         
   //      std::cout << "correctForDimensions x = " << signWidth*deltaX_Width + signDepth*deltaX_Depth << std::endl;
   //      std::cout << "correctForDimensions y = " << signWidth*deltaY_Width + signDepth*deltaY_Depth << std::endl;
+        
+//         std::cout << "distPosWidth2, distNegWidth2 = " << distPosWidth2 << ", " << distNegWidth2  << " distPosDepth2, distNegDepth2 = " << distPosDepth2 << ", " << distNegDepth2 << std::endl;
+//         std::cout << "modelledPosX, deltaX_Width, measuredPosX = " << modelledPosX << ", " << deltaX_Width << ", " << measuredPosX << std::endl;
+//         std::cout << "modelledPosY, deltaY_Width, measuredPosY = " << modelledPosY << ", " << deltaY_Width << ", " << measuredPosY << std::endl;
+
+//         std::cout << "modelledPosX, deltaX_Depth, measuredPosX = " << modelledPosX << ", " << deltaX_Depth << ", " << measuredPosX << std::endl;
+//         std::cout << "modelledPosY, deltaY_Depth, measuredPosY = " << modelledPosY << ", " << deltaY_Depth << ", " << measuredPosY << std::endl;
         
         *xMeasured += (signWidth*deltaX_Width + signDepth*deltaX_Depth);
         *yMeasured += (signWidth*deltaY_Width + signDepth*deltaY_Depth);       
@@ -1423,9 +1433,10 @@ void FeatureProperties::correctPosForDimDiff(float deltaWidth, float deltaDepth,
 
 void FeatureProperties::printProperties()
 {
-std::cout << "Printing feature prop: " << std::endl;
+// std::cout << "Printing feature prop: " << std::endl;
+        std::cout << "\t";
         rectangle_.printProperties();
-        circle_.printProperties();
+//         circle_.printProperties();
         std::cout << "Probability circle = " ;
         std:: cout << featureProbabilities_.get_pCircle();
         std::cout << "Probability rectangle = " ;

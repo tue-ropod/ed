@@ -356,6 +356,7 @@ void Server::update()
     world_model_ = new_world_model;
 
     pub_profile_.publish();
+//     std::cout << "WM-updated" << std::endl;
 }
 
 // ----------------------------------------------------------------------------------------------------

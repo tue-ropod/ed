@@ -328,7 +328,8 @@ class FeatureProperties
         featureProbabilities_.setProbabilities ( pRectangle_in, pCircle_in );
     };
 
-    FeatureProperties ( const FeatureProperties* other ) {          
+    FeatureProperties ( const FeatureProperties* other ) {  
+//             std::cout << "other = " << other << std::endl;
        featureProbabilities_ = other->featureProbabilities_;
        circle_ = other->circle_;
        rectangle_ = other->rectangle_;
