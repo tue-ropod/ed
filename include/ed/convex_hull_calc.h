@@ -37,7 +37,7 @@ namespace tracking
 #define POINTS_TO_CHECK_CONFIDENCE      3               // [-]
 #define EPSILON                         1e-4            // [m]
 #define LASER_ACCURACY                  0.05            // [m]
-#define MIN_PROB_OBJECT			0.10		// [-]
+#define MIN_PROB_OBJECT			0.05		// [-]
 
 
 enum FITTINGMETHOD {
@@ -244,6 +244,8 @@ bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_
 
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end ) ;//, unsigned int& index);
 
+float fitLineLeastSq ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end );
+
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose, unsigned int minPointsLine );
 
 template<typename T>
@@ -271,7 +273,7 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
 
 float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD, unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose, unsigned int minPointsLine);
 
-bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int element, bool elementLow);
+bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int element, bool checkElementLow);
 
 // bool determineSegmentConfidence ( const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int elementLow, unsigned int elementHigh );
 
@@ -308,7 +310,7 @@ class FeatureProbabilities
             double out = pmf_.getProbability ( "Circle" );
         return ( float ) out;
     } ;
-    bool setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleRadius, float typicalCorridorWidth );
+    bool setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth );
 
     void update ( float pRectangle_measured, float pCircle_measured );
     

@@ -96,30 +96,28 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
         {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
 
-//std::cout << "case = NONE" << std::endl;
+std::cout << "case = NONE" << std::endl;
 	    return NONE;
 	    
         }
         else if ( pointsRemoved && remainingSize >= MIN_POINTS_LINEFIT ) 
         {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
-//std::cout << "case = LINE" << std::endl;
+std::cout << "case = LINE1" << std::endl;
             return LINE;
         }
         else  
         { // we dit not remove points and a corner is present
-//std::cout << "case = RECTANGLE" << std::endl;
+std::cout << "case = RECTANGLE" << std::endl;
             return RECTANGLE;
         }
     }
     else 
     {
-
-
-//std::cout << "case = LINE" << std::endl;
+std::cout << "case = LINE2" << std::endl;
         return LINE;
     }
-//std::cout << "case = NONE" << std::endl;
+std::cout << "case = NONE2" << std::endl;
         return NONE;
 }
 
@@ -147,17 +145,17 @@ float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned 
     return false; // end reached without doing something
 }
 
-bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int element, bool elementLow) 
+bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int element, bool checkElementLow) 
 // if !elementLow, element = elementHigh;
 {
         unsigned int num_beams = scan->ranges.size();
         unsigned int nPointsToCheck = POINTS_TO_CHECK_CONFIDENCE;
         
-        if(elementLow)
+        if(checkElementLow)
         {
                 if ( element < nPointsToCheck )
                 {
-                        // Because we have no proof that the complete side of the object is observed
+                        // Because we have no proof that the edges of the object are observed
                         return false;
                 }
                 else
@@ -370,8 +368,8 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
     for ( unsigned int i = 0; i < points.size(); ++i ) 
     {
         float error = fabs ( sqrt ( pow ( xc - points[i].x, 2.0 ) + pow ( yc - points[i].y, 2.0 ) ) - radius ); // distance between a point and a circle;
-        float error2 = pow ( error, 2.0 );
-        sum += error2;
+        float absError = sqrt( pow ( error, 2.0 ) );
+        sum += absError;
     }
 
     float roll = 0.0, pitch = 0.0, yaw = 0.0;
@@ -527,6 +525,8 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
 
     float mean_error1 = fitLine ( points, beta_hat1, &it_start, &it_splitLow ); //
     float mean_error2 = fitLine ( points, beta_hat2, &it_splitHigh, &it_end );
+    
+//     std::cout << "fitRectangle: mean_error1, 2 = " << mean_error1 << ", " << mean_error2 << std::endl;
 
     unsigned int nPointsForExtrema;
     minPointsLine % 2 == 0 ? nPointsForExtrema = minPointsLine / 2 : nPointsForExtrema = (minPointsLine - 1) / 2;
@@ -563,56 +563,60 @@ float fitRectangle ( std::vector<geo::Vec2f>& points, ed::tracking::Rectangle* r
     float x_end = pointHigh.x;
     float y_end = pointHigh.y;
 
-std::cout << "points.size() = " << points.size() << " cornerIndex = " << cornerIndex<< std::endl;
+// std::cout << "points.size() = " << points.size() << " cornerIndex = " << cornerIndex<< std::endl;
     
     float theta = atan2 ( beta_hat1 ( 1 ), 1 ); // TODO: angle on points low alone?
-std::cout << "theta2 orig = " << atan2(beta_hat2( 1 ), 1)  << std::endl;
+// std::cout << "theta2 orig = " << atan2(beta_hat2( 1 ), 1)  << std::endl;
 
     float theta2 = atan2 ( beta_hat2 ( 1 ), 1 ) + M_PI_2;
-    unwrap( &theta2, theta, (float) M_PI );
+    
+    if(theta == theta)
+    {
+            unwrap( &theta2, theta, (float) M_PI );
+    }
 
 
 
-std::cout << "theta 1 = " << theta << std::endl;
-std::cout << "theta 2 unwrapped = " << theta2 << std::endl;
+// std::cout << "theta 1 = " << theta << std::endl;
+// std::cout << "theta 2 unwrapped = " << theta2 << std::endl;
 
     float diff = std::fabs(theta2  - theta );
     
-    if(diff > M_PI / 8 )
-    {
-	// large difference, so rely on the part which has the most points
-	if( points.size() - cornerIndex > 0.5*points.size() )
-	{
-	    theta = theta2;
-	}
-//	else { theta = theta}
-    }
-    else
+    if(diff < M_PI / 8 )
     {
         theta = 0.5*(theta + theta2); // take the average
     }
+    else
+    {
+        // large difference, so rely on the part which has the most points
+        if( points.size() - cornerIndex > 0.5*points.size() && theta2 == theta2 || theta != theta && theta2 == theta2)
+        {
+            theta = theta2;
+        }
+        //else {theta = theta}
+        
+    }
+// std::cout << "Theta final = " << theta << std::endl;
 
-
- pointLow.x = 0.0;
+    pointLow.x = 0.0;
     pointLow.y = 0.0;
     pointHigh.x = 0.0;
     pointHigh.y = 0.0;
 
 //std::cout << "Points low, high = " ; 
     for (unsigned int iAverage = 0; iAverage < nPointsForExtrema; iAverage++) // averaging to be more robust for noise of extreme points
-{
+    {
 
-    geo::Vec2f point = points[cornerIndex + 1 + iAverage];
-    pointLow += point;
+        geo::Vec2f point = points[cornerIndex + 1 + iAverage];
+        pointLow += point;
 
 
-//std::cout << point << ", ";
+        //std::cout << point << ", ";
 
-    point = points[points.size() - 1 - iAverage];
-    pointHigh += point;
+        point = points[points.size() - 1 - iAverage];
+        pointHigh += point;
 
-//std::cout << point << ", ";
-}
+    }
 
     pointLow /= nPointsForExtrema;
     pointHigh /= nPointsForExtrema;
@@ -696,7 +700,10 @@ std::cout << "theta 2 unwrapped = " << theta2 << std::endl;
     unsigned int low_size = cornerIndex;
     unsigned int high_size = points.size() - cornerIndex + 1;
     
-    return ( mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ); // average of error
+//     std::cout << "low_size = " <<  high_size << std::endl;
+//     std::cout << "mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ) = " <<( mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ) << std::endl;
+    
+    return ( (mean_error1*low_size+mean_error2*high_size ) / ( low_size + high_size ) ); // weighted average of error
 }
 
 bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *IDs, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end, float minDistCornerDetection, unsigned int minPointsLine )
@@ -893,12 +900,52 @@ bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_
     }
 }
 
+
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )
+{
+     float mean_errorOriginal = fitLineLeastSq ( points, beta_hat, it_start, it_end ) ;   
+     
+     std::vector<geo::Vec2f> pointsTranspose;
+     for(std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it)
+     {
+        geo::Vec2f point = *it;
+        geo::Vec2f pointTranspose;
+        
+        pointTranspose.x = point.y;
+        pointTranspose.y = point.x;
+        
+        pointsTranspose.push_back(pointTranspose);
+     }
+     
+     Eigen::VectorXf beta_hatTranspose(2);   
+     
+    std::vector<geo::Vec2f>::iterator it_startTranspose = pointsTranspose.begin();
+    std::vector<geo::Vec2f>::iterator it_endTranspose = pointsTranspose.end();
+
+     float mean_errorTranspose = fitLineLeastSq ( pointsTranspose, beta_hatTranspose, &it_startTranspose, &it_endTranspose ) ; 
+     
+     if(mean_errorTranspose < mean_errorOriginal)
+     {
+             beta_hat(0) = -beta_hatTranspose(0) / beta_hatTranspose(1); //rewrite x = b+a*y -> y = 1/a*x - b/a
+             beta_hat(1) = 1.0 / beta_hatTranspose(1);
+             
+             return mean_errorTranspose;
+     }
+     
+     return mean_errorOriginal;
+//      std::cout << "mean_errorOriginal = " << mean_errorOriginal << "\t" << " beta_hat = " << beta_hat << " yaw = " << std::atan2(beta_hat(1), 1) << std::endl;
+//      std::cout << "mean_errorTranspose = " << mean_errorTranspose  << "\t" << " beta_hatTranspose = " << beta_hatTranspose << " yaw = " << std::atan2(beta_hatTranspose(1), 1) << std::endl;
+     
+}
+
+float fitLineLeastSq ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
     unsigned int size = std::distance ( *it_start, *it_end );
     Eigen::MatrixXf m ( size, 2 );
+    Eigen::MatrixXf mtest ( size, 2 );
     Eigen::VectorXf y ( size );
+    Eigen::VectorXf ytest ( size );
     unsigned int counter = 0;
     
     std::vector<geo::Vec2f>::iterator it = *it_start;
@@ -906,20 +953,38 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std:
     it = *it_end; it--;
     geo::Vec2f point_end = *it;
     
+    
+//     std::cout << "points = " << std::endl;
     for ( std::vector<geo::Vec2f>::iterator it = *it_start; it != *it_end; ++it ) 
     {
         geo::Vec2f point = *it;
+//         std::cout << point << "\t";
         m ( counter, 0 ) = ( double ) 1.0;
         m ( counter, 1 ) = ( double ) point.x;
+    
+//         mtest ( counter, 0 ) = ( double ) 1.0;
+//         mtest ( counter, 1 ) = ( double ) point.y;
         y ( counter ) = ( double ) point.y;
+        ytest ( counter ) = ( double ) point.y;
         counter++;
     }
 
     Eigen::MatrixXf mt ( size, 2 );
     mt = m.transpose();
+    
+//     std::cout << "m trans = " << m.transpose() << std::endl;
+//     std::cout << "y trans = " << y.transpose() << std::endl;
+//     std::cout << " Sol3 = " << ( mt*m ).inverse() * mt * y;
+//     beta_hat = m.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y); 
 
-    beta_hat = ( mt*m ).inverse() * mt * y;
-
+    beta_hat = ( mt*m ).inverse() * mt * y;// Numerically not stable!!!!
+    
+//     Eigen::VectorXf beta_hat1 ( 2 ), beta_hat2 ( 2 );
+//     std::cout << "Sol1 = " << m.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y);
+//     std::cout << " Sol2 = " << m.colPivHouseholderQr().solve(y);
+    
+//     std::cout << " SolTest = " << mtest.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(ytest);
+//     std::cout << " Sol3Test = " << ( mtest.transpose()*m ).inverse() * mtest.transpose() * y;
     float error, sum = 0.0;
 
     counter = 0;
@@ -928,21 +993,28 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std:
         // Distance of each point to line
         geo::Vec2f point = *it;
         error = fabs ( -beta_hat ( 1 ) * point.x+point.y - beta_hat ( 0 ) ) /sqrt ( beta_hat ( 1 ) *beta_hat ( 1 ) + 1 ); // distance of a point to a line, see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-        float error2 = pow ( error, 2.0 );
-        sum += error2;
+        float absError = sqrt( pow( error, 2.0 ) );
+        sum += absError;
         counter ++;
+//         std::cout << "sum = " << sum << " \t";
     }
+    
+//     std::cout << "fitLineLeastSq: avg abs error = " << sum/counter << std::endl;
 
     return sum/counter;
 }
 
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose, unsigned int minPointsLine )
 {
-//std::cout << "setRectangular Parameters for line" << std::endl;
+// std::cout << "setRectangular Parameters for line" << std::endl;
     Eigen::VectorXf beta_hat ( 2 );
-    float mean_error2 = fitLine ( points, beta_hat, it_low, it_high ) ;
+    float averageError = fitLine ( points, beta_hat, it_low, it_high ) ;
+    std::cout << "averageError = " << averageError << std::endl;
 
     float theta = atan2 ( beta_hat ( 1 ), 1 );
+    
+//     std::cout << "beta_hat = " << beta_hat << std::endl;
+//     std::cout << "beta_hat(1) = " << beta_hat(1) << ", theta = " << theta << std::endl;
 
     unsigned int ii_start = std::distance ( points.begin(), *it_low );
     unsigned int ii_end = std::distance ( points.begin(), *it_high ) - 1;
@@ -958,23 +1030,23 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
 
 //std::cout << "Points low, high = " ;
     for (unsigned int iAverage = 0; iAverage < nPointsForExtrema; iAverage++) // averaging to be more robust for noise of extreme points
-{
+    {
 
     geo::Vec2f point = points[ii_start + iAverage];
     pointLow += point;
 
-//std::cout << point << ", ";
+// std::cout << point << ", ";
 
     point = points[ii_end - iAverage];
     pointHigh += point;
-//std::cout << point << ", ";
+// std::cout << point << ", ";
 
-}
+   }
 
     pointLow /= nPointsForExtrema;
     pointHigh /= nPointsForExtrema;
 
-//std::cout << "avg low, high = " << pointLow << ", " << pointHigh << std::endl;
+// std::cout << "avg low, high = " << pointLow << ", " << pointHigh << std::endl;
     
     float x_start = pointLow.x;
     float y_start = pointLow.y; 
@@ -993,7 +1065,7 @@ float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::v
     
     rectangle->setValues ( center_x, center_y, sensor_pose.getOrigin().getZ(), width, ARBITRARY_DEPTH, ARBITRARY_HEIGHT, roll, pitch, yaw ); // Assumption: object-height identical to sensor-height
 
-    return mean_error2;
+    return averageError;
 }
 
 Rectangle::Rectangle()
@@ -1243,7 +1315,7 @@ bool FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSqu
         {
             // Circles with a very large radius could have a smaller error compared to fitting a line. For the type of environment, this is very unlikely.
             // Therefore, the probability of large circles (diameter > typicalCorridorWidth) is reduced in an exponential fashion
-            probabilityScaling = std::exp ( -1/ ( 0.5*typicalCorridorWidth ) * ( circleDiameter -0.5*typicalCorridorWidth ) );
+            probabilityScaling = std::exp ( -1 / ( 0.5*typicalCorridorWidth ) * ( circleDiameter -0.5*typicalCorridorWidth ) );
         }
 
         float sum = errorRectangleSquared + errorCircleSquared;
@@ -1555,15 +1627,15 @@ void FeatureProperties::correctForDimensions( float deltaWidth, float deltaDepth
         int signWidth =  distPosWidth2 < distNegWidth2 ? 1 : -1;
         int signDepth =  distPosDepth2 < distNegDepth2 ? 1 : -1;
         
-    //  std::cout << "correctForDimensions x = " << signWidth*deltaX_Width + signDepth*deltaX_Depth << std::endl;
-    //  std::cout << "correctForDimensions y = " << signWidth*deltaY_Width + signDepth*deltaY_Depth << std::endl;
+//      std::cout << "correctForDimensions x = " << signWidth*deltaX_Width + signDepth*deltaX_Depth << std::endl;
+//      std::cout << "correctForDimensions y = " << signWidth*deltaY_Width + signDepth*deltaY_Depth << std::endl;
         
-    //     std::cout << "distPosWidth2, distNegWidth2 = " << distPosWidth2 << ", " << distNegWidth2  << " distPosDepth2, distNegDepth2 = " << distPosDepth2 << ", " << distNegDepth2 << std::endl;
-      //   std::cout << "modelledPosX, deltaX_Width, measuredPosX = " << modelledPosX << ", " << deltaX_Width << ", " << measuredPosX << std::endl;
-     //    std::cout << "modelledPosY, deltaY_Width, measuredPosY = " << modelledPosY << ", " << deltaY_Width << ", " << measuredPosY << std::endl;
+//         std::cout << "distPosWidth2, distNegWidth2 = " << distPosWidth2 << ", " << distNegWidth2  << " distPosDepth2, distNegDepth2 = " << distPosDepth2 << ", " << distNegDepth2 << std::endl;
+//         std::cout << "modelledPosX, deltaX_Width, measuredPosX = " << modelledPosX << ", " << deltaX_Width << ", " << measuredPosX << std::endl;
+//         std::cout << "modelledPosY, deltaY_Width, measuredPosY = " << modelledPosY << ", " << deltaY_Width << ", " << measuredPosY << std::endl;
 
-       //  std::cout << "modelledPosX, deltaX_Depth, measuredPosX = " << modelledPosX << ", " << deltaX_Depth << ", " << measuredPosX << std::endl;
-         //std::cout << "modelledPosY, deltaY_Depth, measuredPosY = " << modelledPosY << ", " << deltaY_Depth << ", " << measuredPosY << std::endl;
+//         std::cout << "modelledPosX, deltaX_Depth, measuredPosX = " << modelledPosX << ", " << deltaX_Depth << ", " << measuredPosX << std::endl;
+//          std::cout << "modelledPosY, deltaY_Depth, measuredPosY = " << modelledPosY << ", " << deltaY_Depth << ", " << measuredPosY << std::endl;
         
         *xMeasured += (signWidth*deltaX_Width + signDepth*deltaX_Depth);
         *yMeasured += (signWidth*deltaY_Width + signDepth*deltaY_Depth);       
@@ -1590,7 +1662,7 @@ void FeatureProperties::printProperties()
 {
 // std::cout << "Printing feature prop: " << std::endl;
         std::cout << "\t";
-        rectangle_.printProperties();
+//         rectangle_.printProperties();
 //         circle_.printProperties();
         std::cout << "Probability circle = " ;
         std:: cout << featureProbabilities_.get_pCircle();
