@@ -80,7 +80,7 @@ public:
         if (!has_pose_)
 	{
 // 	  std::cout << "warning" << std::endl;
-            log::warning() << "Someone's accessing an entity's pose while it doesnt have one." << std::endl;
+            log::warning() << "Someone's accessing an entity's pose while it doesnt have one. ent ID = " << id() << std::endl;
 	}
         return pose_;
     }

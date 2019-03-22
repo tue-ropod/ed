@@ -59,7 +59,7 @@ void determineIAV(std::vector<float> ranges, float* mean, float* standardDeviati
         *standardDeviation = std::sqrt( *standardDeviation / counter );
 }
 
-FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose )
+FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose, unsigned int minPointsLine )
 {
     // Determine is a line or a rectangle should be fitted. In case of a rectangle, the number of elements for both sides should meet the minimum number of points for a line fit
     // for both lines. Otherwise, a line will be fitted on the remaining points.
@@ -68,56 +68,62 @@ FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cor
     *it_high = points.end();
 
     bool includeCorner = *cornerIndex > 0;
-
+unsigned int remainingSize = points.size();
     // In the case of including a corner, check if both segments have enough points to describe a line with. If not, do not use these data.
     if ( includeCorner ) {
         unsigned int nPointsLow = *cornerIndex + 1; // + 1 because the corner can be used for both lines
         unsigned int nPointsHigh = points.size() - *cornerIndex;
-        unsigned int remainingSize = points.size();
+        
 
         bool fitSingleline = false;
         bool pointsRemoved = false;
 
-        if ( nPointsLow < MIN_POINTS_LINEFIT ) 
+        if ( nPointsLow < minPointsLine ) 
         { // Part of section too smal -> remove it from the data which are analyzed and try to fit line again
             *it_low += *cornerIndex;
             remainingSize = nPointsHigh;
             pointsRemoved = true;
         }
         
-        if ( nPointsHigh < MIN_POINTS_LINEFIT ) 
+        if ( nPointsHigh < minPointsLine ) 
         {
             *it_high -= nPointsHigh;
             remainingSize = nPointsLow;
             pointsRemoved = true;
         }       
 
-        if ( pointsRemoved && remainingSize < MIN_POINTS_LINEFIT ) 
+        if ( pointsRemoved && remainingSize < minPointsLine ) 
         {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
 
-std::cout << "case = NONE" << std::endl;
+// std::cout << "case = NONE" << std::endl;
+// std::cout << "remainingSize = " << remainingSize  << std::endl;
+
 	    return NONE;
 	    
         }
-        else if ( pointsRemoved && remainingSize >= MIN_POINTS_LINEFIT ) 
+        else if ( pointsRemoved && remainingSize >= minPointsLine ) 
         {
             *cornerIndex = std::numeric_limits<unsigned int>::quiet_NaN();
-std::cout << "case = LINE1" << std::endl;
+// std::cout << "case = LINE1 v0" << std::endl;
             return LINE;
         }
         else  
         { // we dit not remove points and a corner is present
-std::cout << "case = RECTANGLE" << std::endl;
+// std::cout << "case = RECTANGLE" << std::endl;
             return RECTANGLE;
         }
     }
-    else 
+    else if(remainingSize >= minPointsLine)
     {
-std::cout << "case = LINE2" << std::endl;
+// std::cout << "case = LINE2 v1" << std::endl;
         return LINE;
     }
-std::cout << "case = NONE2" << std::endl;
+    else{
+//             std::cout << "case = NONE2" << std::endl;
+        return NONE;
+    }
+// std::cout << "case = NONE3" << std::endl;
         return NONE;
 }
 
@@ -148,13 +154,17 @@ float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD,  unsigned 
 bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, unsigned int element, bool checkElementLow) 
 // if !elementLow, element = elementHigh;
 {
+//         std::cout << "determineCornerConfidence-function "<< std::endl;
         unsigned int num_beams = scan->ranges.size();
         unsigned int nPointsToCheck = POINTS_TO_CHECK_CONFIDENCE;
         
+//         std::cout << "POINTS_TO_CHECK_CONFIDENCE = " << POINTS_TO_CHECK_CONFIDENCE << std::endl;
+//         std::cout << " element = " << element << " checkElementLow = " << checkElementLow << std::endl;
         if(checkElementLow)
         {
                 if ( element < nPointsToCheck )
                 {
+//                         std::cout << "Debug test 0 \t";
                         // Because we have no proof that the edges of the object are observed
                         return false;
                 }
@@ -162,11 +172,14 @@ bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, uns
                 {
                         
                         float rsToCheck = scan->ranges[element];
+//                         std::cout << "Debug test 1 \t";
                         for ( unsigned int l = element - nPointsToCheck; l < element; l++ )
                         {
+//                                 std::cout << "Debug test 2 \t";
                                 float rsToCompare = scan->ranges[l];
                                 if ( rsToCheck > rsToCompare + LASER_ACCURACY && rsToCompare >= 0 + EPSILON )
                                 {
+//                                         std::cout << "Debug test 3 \t";
                                         return false;
                                 }
                         }
@@ -179,22 +192,28 @@ bool determineCornerConfidence(const sensor_msgs::LaserScan::ConstPtr& scan, uns
         
                 if ( num_beams - element < nPointsToCheck )
                 {
+//                         std::cout << "Debug test 4 \t";
                         return false;
                 }
                 else
                 {
+//                         std::cout << "Debug test 5 \t";
                         float rsToCheck = scan->ranges[element];
                         
+//                         std::cout << "Debug test 6 \t";
                         for ( unsigned int l = element; l < element + nPointsToCheck; l++ )
                         {
+//                                 std::cout << "Debug test 7 \t";
                                 float rsToCompare = scan->ranges[l];
+//                                 std::cout << "Debug test 8 \t";
                                 if ( rsToCheck > rsToCompare + LASER_ACCURACY && rsToCompare >= 0 + EPSILON )
                                 {
+//                                         std::cout << "Debug test 9 \t";
                                         return false;
                                 }
                         }     
                 }
-                
+//                 std::cout << "Debug test 10 \t";
                 return true; 
         }
 }
@@ -736,18 +755,21 @@ minPointsLine % 2 == 0 ? nPointsForExtrema = minPointsLine / 2 : nPointsForExtre
     pointHigh.y = 0.0;
 
 //std::cout << "Points low, high = " ;
+//     std::cout << "Find possible corner: distance = " << std::distance(points.begin(), *it_end) << " vector size = " << points.size() << std::endl;
     for (unsigned int iAverage = 0; iAverage < nPointsForExtrema; iAverage++) // averaging to be more robust for noise of extreme points
 {
-
+// std::cout << "test = 1 \t";
     geo::Vec2f point = *(*it_start + iAverage);
     pointLow += point;
-
+// std::cout << "test = 2 \t";
 //std::cout << point << ", ";
+
 
     point = *(*it_end - 1 - iAverage);
+//     std::cout << "test = 3 \t";
     pointHigh += point;
 //std::cout << point << ", ";
-
+// std::cout << "test = 4 \t";
 }
 
     pointLow /= nPointsForExtrema;
@@ -801,7 +823,7 @@ minPointsLine % 2 == 0 ? nPointsForExtrema = minPointsLine / 2 : nPointsForExtre
         }
     }
 
-
+// std::cout << "test = 5 "<< std::endl;
   //   std::cout << "maxDistance = " << maxDistance << " at ID = " << ID << " gives point " << points[ID] << std::endl;
     
     if ( maxDistance >  minDistCornerDetection ) 
@@ -830,7 +852,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
         segmentToAdd.begin = points.begin();
         segmentToAdd.end = points.begin() + cornerIndices->back();
 
-        if ( segmentToAdd.end - segmentToAdd.begin > MIN_POINTS_LINEFIT ) 
+        if ( segmentToAdd.end - segmentToAdd.begin > minPointsLine ) 
         {
             segments.push_back ( segmentToAdd );
         }
@@ -838,7 +860,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
         segmentToAdd.begin = points.begin() + cornerIndices->back();
         segmentToAdd.end = points.end() - 1;
 
-        if ( segmentToAdd.end - segmentToAdd.begin > MIN_POINTS_LINEFIT ) 
+        if ( segmentToAdd.end - segmentToAdd.begin > minPointsLine ) 
         {
             segments.push_back ( segmentToAdd );
         }
@@ -855,7 +877,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
                 segmentToAdd.begin = laserSegment.begin;
                 segmentToAdd.end = points.begin() + cornerIndices->back();
 
-                if ( segmentToAdd.end - segmentToAdd.begin > MIN_POINTS_LINEFIT ) 
+                if ( segmentToAdd.end - segmentToAdd.begin > minPointsLine ) 
                 {
                     segments.push_back ( segmentToAdd );
                 }
@@ -863,7 +885,7 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
                 segmentToAdd.begin = points.begin() + cornerIndices->back();
                 segmentToAdd.end = laserSegment.end;
 
-                if ( segmentToAdd.end - segmentToAdd.begin > MIN_POINTS_LINEFIT ) 
+                if ( segmentToAdd.end - segmentToAdd.begin > minPointsLine ) 
                 {
                     segments.push_back ( segmentToAdd );
                 }
@@ -880,25 +902,25 @@ bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned
     }
 }
 
-bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_pose,  unsigned int cornerIndex )
-{
-    // check if a split is required: 2 objects close to each other can form a rectangle in the wrong quadrant. Model as 2 separate lines
-    geo::Vec2f centerpoint;
-    centerpoint.x = 0.5* ( points[0].x + points[points.size() - 1].x );
-    centerpoint.y = 0.5* ( points[0].y + points[points.size() - 1].y );
-
-    float centerDist2 = pow ( sensor_pose.getOrigin().getX() - centerpoint.x, 2.0 ) + pow ( sensor_pose.getOrigin().getY() - centerpoint.y, 2.0 );
-    float cornerDist2 = pow ( sensor_pose.getOrigin().getX() - points[cornerIndex].x, 2.0 ) + pow ( sensor_pose.getOrigin().getY() - points[cornerIndex].y, 2.0 );
-
-    if ( centerDist2 < cornerDist2 ) 
-    {
-        return true;
-    }
-    else 
-    {
-        return false;
-    }
-}
+// bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_pose,  unsigned int cornerIndex )
+// {
+//     // check if a split is required: 2 objects close to each other can form a rectangle in the wrong quadrant. Model as 2 separate lines
+//     geo::Vec2f centerpoint;
+//     centerpoint.x = 0.5* ( points[0].x + points[points.size() - 1].x );
+//     centerpoint.y = 0.5* ( points[0].y + points[points.size() - 1].y );
+// 
+//     float centerDist2 = pow ( sensor_pose.getOrigin().getX() - centerpoint.x, 2.0 ) + pow ( sensor_pose.getOrigin().getY() - centerpoint.y, 2.0 );
+//     float cornerDist2 = pow ( sensor_pose.getOrigin().getX() - points[cornerIndex].x, 2.0 ) + pow ( sensor_pose.getOrigin().getY() - points[cornerIndex].y, 2.0 );
+// 
+//     if ( centerDist2 < cornerDist2 ) 
+//     {
+//         return true;
+//     }
+//     else 
+//     {
+//         return false;
+//     }
+// }
 
 
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )
@@ -924,15 +946,21 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std:
 
      float mean_errorTranspose = fitLineLeastSq ( pointsTranspose, beta_hatTranspose, &it_startTranspose, &it_endTranspose ) ; 
      
-     if(mean_errorTranspose < mean_errorOriginal)
+     if(mean_errorTranspose == mean_errorTranspose && mean_errorTranspose < mean_errorOriginal)
      {
              beta_hat(0) = -beta_hatTranspose(0) / beta_hatTranspose(1); //rewrite x = b+a*y -> y = 1/a*x - b/a
              beta_hat(1) = 1.0 / beta_hatTranspose(1);
              
              return mean_errorTranspose;
      }
-     
-     return mean_errorOriginal;
+     else if(mean_errorOriginal == mean_errorOriginal )
+     {
+             return mean_errorOriginal;
+     }
+     else
+     {
+             return std::numeric_limits< float >::infinity();
+     }
 //      std::cout << "mean_errorOriginal = " << mean_errorOriginal << "\t" << " beta_hat = " << beta_hat << " yaw = " << std::atan2(beta_hat(1), 1) << std::endl;
 //      std::cout << "mean_errorTranspose = " << mean_errorTranspose  << "\t" << " beta_hatTranspose = " << beta_hatTranspose << " yaw = " << std::atan2(beta_hatTranspose(1), 1) << std::endl;
      
@@ -941,7 +969,11 @@ float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std:
 float fitLineLeastSq ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end )
 {
     // Least squares method: http://home.isr.uc.pt/~cpremebida/files_cp/Segmentation%20and%20Geometric%20Primitives%20Extraction%20from%202D%20Laser%20Range%20Data%20for%20Mobile%20Robot%20Applications.pdf
+        
+//         std::cout << "fitLineLeastSq-fyunction" << std::endl;
+
     unsigned int size = std::distance ( *it_start, *it_end );
+//             std::cout << "Size = " << size << std::endl;
     Eigen::MatrixXf m ( size, 2 );
     Eigen::MatrixXf mtest ( size, 2 );
     Eigen::VectorXf y ( size );
@@ -1007,9 +1039,10 @@ float fitLineLeastSq ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_ha
 float setRectangularParametersForLine ( std::vector<geo::Vec2f>& points,  std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, ed::tracking::Rectangle* rectangle, const geo::Pose3D& sensor_pose, unsigned int minPointsLine )
 {
 // std::cout << "setRectangular Parameters for line" << std::endl;
+// std::cout << "points.size() = " << points.size() << std::endl;
     Eigen::VectorXf beta_hat ( 2 );
     float averageError = fitLine ( points, beta_hat, it_low, it_high ) ;
-    std::cout << "averageError = " << averageError << std::endl;
+//     std::cout << "averageError = " << averageError << std::endl;
 
     float theta = atan2 ( beta_hat ( 1 ), 1 );
     
@@ -1339,8 +1372,8 @@ bool FeatureProbabilities::setMeasurementProbabilities ( float errorRectangleSqu
     else
     {
         // Infinity detected on both of the elements: this is the case when the number of points is too small to do a fit. Equal probability set.
-//         pmf_.setProbability ( "Rectangle", 0.5 );
-//         pmf_.setProbability ( "Circle", 0.5 );
+        pmf_.setProbability ( "Rectangle", 0.5 );
+        pmf_.setProbability ( "Circle", 0.5 );
     
             // TODO if there are enough points for a single fit (probably circle only), is this fit realistic?
             // Acatually, it should be measured if the object which is modelled is realistic by comparing the laser scan with the expected scan based on that object
@@ -1662,8 +1695,8 @@ void FeatureProperties::printProperties()
 {
 // std::cout << "Printing feature prop: " << std::endl;
         std::cout << "\t";
-//         rectangle_.printProperties();
-//         circle_.printProperties();
+        rectangle_.printProperties();
+        circle_.printProperties();
         std::cout << "Probability circle = " ;
         std:: cout << featureProbabilities_.get_pCircle();
         std::cout << "Probability rectangle = " ;

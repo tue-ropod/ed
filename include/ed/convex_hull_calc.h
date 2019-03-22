@@ -30,7 +30,7 @@ namespace tracking
 // TODO: make many of variables below configurable/tunable in ED model descriptions?
 #define TIMEOUT_TIME                    0.5             // [s]
 //#define MAX_LINE_ERROR                  0.05            // [m]  
-#define MIN_POINTS_LINEFIT              10               // [-]
+// #define MIN_POINTS_LINEFIT              5               // [-]
 #define ARBITRARY_HEIGHT                0.03            // [m]
 #define ARBITRARY_DEPTH                 ARBITRARY_HEIGHT
 #define MARGIN_RECTANGLE_INTERCHANGE    30*M_PI/180     // [rad]
@@ -240,7 +240,7 @@ bool findPossibleCorner ( std::vector<geo::Vec2f>& points, std::vector<unsigned 
 
 bool findPossibleCorners ( std::vector<geo::Vec2f>& points, std::vector<unsigned int> *cornerIndices, float minDistCornerDetection, unsigned int minPointsLine );
 
-bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_pose,  unsigned int cornerIndex );
+// bool checkForSplit ( std::vector<geo::Vec2f>& points, const geo::Pose3D& sensor_pose,  unsigned int cornerIndex );
 
 float fitLine ( std::vector<geo::Vec2f>& points, Eigen::VectorXf& beta_hat, std::vector<geo::Vec2f>::iterator* it_start, std::vector<geo::Vec2f>::iterator* it_end ) ;//, unsigned int& index);
 
@@ -269,7 +269,7 @@ void wrap2Interval ( T* alpha, T lowerBound, T upperBound )
     }
 }
 
-FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose );
+FITTINGMETHOD determineCase ( std::vector<geo::Vec2f>& points, unsigned int* cornerIndex, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose,   unsigned int minPointsLine );
 
 float fitObject ( std::vector<geo::Vec2f>& points, int FITTINGMETHOD, unsigned int* cornerIndex, ed::tracking::Rectangle* rectangle, ed::tracking::Circle* circle, std::vector<geo::Vec2f>::iterator* it_low, std::vector<geo::Vec2f>::iterator* it_high, const geo::Pose3D& sensor_pose, unsigned int minPointsLine);
 
