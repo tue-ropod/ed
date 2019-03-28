@@ -289,10 +289,13 @@ class FeatureProbabilities
   public:
     pbl::PMF pmf_;
 
-    FeatureProbabilities ( float pRectangle_in = 0.5, float pCircle_in = 0.5 ) { // Initialize with 50/50 probabilities
+	FeatureProbabilities()
+{
+
+//    FeatureProbabilities ( void ) { // Initialize with 50/50 probabilities
         pmf_.setDomainSize ( 2 );
-        pmf_.setProbability ( "Rectangle", pRectangle_in );
-        pmf_.setProbability ( "Circle", pCircle_in );
+        pmf_.setProbability ( "Rectangle", 0.5 );
+        pmf_.setProbability ( "Circle", 0.5 );
     };
 
     void setProbabilities ( float pRectangle_in, float pCircle_in ) {
@@ -310,6 +313,10 @@ class FeatureProbabilities
             double out = pmf_.getProbability ( "Circle" );
         return ( float ) out;
     } ;
+
+    int getDomainSize (){
+            return pmf_.getDomainSize();
+            }
     bool setMeasurementProbabilities ( float errorRectangleSquared, float errorCircleSquared, float circleDiameter, float typicalCorridorWidth );
 
     void update ( float pRectangle_measured, float pCircle_measured );
@@ -317,6 +324,12 @@ class FeatureProbabilities
     void update ( FeatureProbabilities& featureProbabilities_in );
 
 };
+
+//FeatureProbabilities::FeatureProbabilities (  ) { // Initialize with 50/50 probabilities
+//        pmf_.setDomainSize ( 2 );
+//        pmf_.setProbability ( "Rectangle", 0.5 );
+//        pmf_.setProbability ( "Circle", 0.5 );
+//    };
 
 class FeatureProperties
 {
@@ -327,9 +340,9 @@ class FeatureProperties
 
     Rectangle rectangle_;
 
-    FeatureProperties ( float pRectangle_in = 0.5, float pCircle_in = 0.5 ) { // Initialize with 50/50 probabilities unless otherwise indicated
-        featureProbabilities_.setProbabilities ( pRectangle_in, pCircle_in );
-    };
+    FeatureProperties ( ) { // Initialize with 50/50 probabilities unless otherwise indicated
+       featureProbabilities_.setProbabilities ( 0.5, 0.5 );
+   };
 
     FeatureProperties ( const FeatureProperties* other ) {  
 //             std::cout << "other = " << other << std::endl;
