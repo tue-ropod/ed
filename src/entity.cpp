@@ -26,6 +26,7 @@ Entity::Entity(const UUID& id, const TYPE& type, const unsigned int& measurement
     shape_revision_(0),
 //    creation_time_(creation_time),
     has_pose_(false),
+    flagSize_(0),
     pose_(geo::Pose3D::identity())
 {
 }

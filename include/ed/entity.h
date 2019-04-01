@@ -136,7 +136,7 @@ public:
         std::map<Idx, Property>::const_iterator it = properties_.find(key.idx);
         if (it == properties_.end())
 	{
-             std::cout << "Entity not found" << std::endl; return 0;
+             std::cout << "Entity " << id_ << "key " << key.idx << " not found \t"; return 0;
 	}
 
         const Property& p = it->second;
@@ -210,21 +210,71 @@ public:
 
     double lastUpdateTimestamp() const { return last_update_timestamp_; }
 
-    void setFlag(const std::string& flag) { flags_.insert(flag); }
+    void setFlag(const std::string& flag) {
+std::cout << "Going to set flag " << flag << " for ent " << id_ << "size before = " << flags_.size() << std::endl;
+ flags_.insert(flag); 
+flagSize_++;
+std::cout << " size after = " << flags_.size() << std::endl;
+}
 
-    void removeFlag(const std::string& flag) { flags_.erase(flag); }
 
-    bool hasFlag(const std::string& flag) const { return flags_.find(flag) != flags_.end(); }
+    void removeFlag(const std::string& flag) { std::cout << "Going to erase flag " << flag << " for ent " << id_ << std::endl; flags_.erase(flag);flagSize_--; }
 
+//    bool hasFlag(const std::string& flag) const { return flags_.find(flag) != flags_.end(); }
+//    bool hasFlag(const std::string& flag) const 
+//	{ 
+ //           std::cout << "In func. has Flag " << flag << " for id = " << id_ << " Flag Size = " << flags_.size() << "flagSize2 = " << flagSize_ << "\n";
+
+//	std::set<std::string>::iterator it = flags_.begin();
+
+//	std::string s = *it;
+
+//	for(unsigned int iFlag = 1; iFlag < flagSize_; iFlag++)
+//	{
+
+//		std::advance(it, 1);
+
+//		if(!s.compare(flag) )
+//		{		
+//			return true;
+//		}
+//	}
+
+//	return false;
+
+
+//            return flags_.find(flag) != flags_.end(); 
+//	}
+
+ bool hasFlag(const std::string& flag) const { 
+            std::cout << "In func. " << std::endl;
+            std::cout << "Flag Size = " << flags_.size() << " newFlagSize = " << flagsize_ << "\t";
+//if(flags_.size() != flagSize_)
+//{
+//return false;
+//}
+for(unsigned int iFlag = 0; iFlag < flagSize_; iFlag++)
+{
+std::set<std::string>::iterator it = flags_.begin();
+std::advance(it, iFlag);
+std::string flagOfList = *it;
+	if (!flagOfList.compare(flag)) 
+{
+return true;
+}
+//            return flags_.find(flag) != flags_.end(); 
+}
+return false;
+}
     const std::set<std::string>& flags() const { return flags_; }
     
     void printFlags() const {
       int counter = 1;
       
-      //std::cout << "Flags will be printed now for entity " << id_ << std::endl;
+      std::cout << "Flags will be printed now for entity " << id_ << std::endl;
       
       for(std::set<std::string>::iterator it = flags_.begin(); it != flags_.end(); ++it ) {
-	//  std::cout << "Flag" << counter << " = " << *it << std::endl;
+	  std::cout << "Flag" << counter << " = " << *it << std::endl;
 	  counter++;
       }
       
@@ -272,6 +322,8 @@ private:
     void updateConvexHullFromShape();
 
     std::set<std::string> flags_;
+
+    unsigned int flagSize_;
 
 };
 
