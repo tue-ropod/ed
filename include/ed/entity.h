@@ -248,7 +248,7 @@ std::cout << " size after = " << flags_.size() << std::endl;
 
  bool hasFlag(const std::string& flag) const { 
             std::cout << "In func. " << std::endl;
-            std::cout << "Flag Size = " << flags_.size() << " newFlagSize = " << flagsize_ << "\t";
+            std::cout << "Flag Size = " << flags_.size() << " newFlagSize = " << flagSize_ << "\t";
 //if(flags_.size() != flagSize_)
 //{
 //return false;
