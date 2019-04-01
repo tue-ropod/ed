@@ -211,14 +211,11 @@ public:
     double lastUpdateTimestamp() const { return last_update_timestamp_; }
 
     void setFlag(const std::string& flag) {
-std::cout << "Going to set flag " << flag << " for ent " << id_ << "size before = " << flags_.size() << std::endl;
  flags_.insert(flag); 
-flagSize_++;
-std::cout << " size after = " << flags_.size() << std::endl;
 }
 
 
-    void removeFlag(const std::string& flag) { std::cout << "Going to erase flag " << flag << " for ent " << id_ << std::endl; flags_.erase(flag);flagSize_--; }
+    void removeFlag(const std::string& flag) { flags_.erase(flag); }
 
 //    bool hasFlag(const std::string& flag) const { return flags_.find(flag) != flags_.end(); }
 //    bool hasFlag(const std::string& flag) const 
@@ -246,26 +243,26 @@ std::cout << " size after = " << flags_.size() << std::endl;
 //            return flags_.find(flag) != flags_.end(); 
 //	}
 
- bool hasFlag(const std::string& flag) const { 
-            std::cout << "In func. " << std::endl;
-            std::cout << "Flag Size = " << flags_.size() << " newFlagSize = " << flagSize_ << "\t";
-//if(flags_.size() != flagSize_)
+ bool hasFlag(const std::string& flag) const { return flags_.find(flag) != flags_.end();}
+//            std::cout << "In func. " << std::endl;
+//            std::cout << "Flag Size = " << flags_.size() << " newFlagSize = " << flagSize_ << "\t";
+//	if(flags_.size() != flagSize_)
+//	{
+//		return false;
+//	}
+//for(unsigned int iFlag = 0; iFlag < flagSize_; iFlag++)
 //{
+//std::set<std::string>::iterator it = flags_.begin();
+//std::advance(it, iFlag);
+//std::string flagOfList = *it;
+//	if (!flagOfList.compare(flag)) 
+//{
+//return true;
+//}
+//            return flags_.find(flag) != flags_.end(); 
+//}
 //return false;
 //}
-for(unsigned int iFlag = 0; iFlag < flagSize_; iFlag++)
-{
-std::set<std::string>::iterator it = flags_.begin();
-std::advance(it, iFlag);
-std::string flagOfList = *it;
-	if (!flagOfList.compare(flag)) 
-{
-return true;
-}
-//            return flags_.find(flag) != flags_.end(); 
-}
-return false;
-}
     const std::set<std::string>& flags() const { return flags_; }
     
     void printFlags() const {
@@ -322,8 +319,6 @@ private:
     void updateConvexHullFromShape();
 
     std::set<std::string> flags_;
-
-    unsigned int flagSize_;
 
 };
 
