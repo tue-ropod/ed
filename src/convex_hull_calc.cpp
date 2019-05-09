@@ -399,7 +399,8 @@ float fitCircle ( std::vector<geo::Vec2f>& points, ed::tracking::Circle* circle,
 Circle::Circle()
 {
     float notANumber = 0.0/0.0;
-    P_.setIdentity( 4, 4 ); 
+//     P_.setIdentity( 7, 7 );
+    P_.setIdentity( 5, 5 );
     Pdim_.setIdentity( 1, 1 ); 
     this->setProperties( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber  ); // Produces NaN values, meaning that the properties are not initialized yet
     xVel_   = 0.0;
@@ -491,6 +492,8 @@ void Circle::setTranslationalVelocityMarker( visualization_msgs::Marker& marker,
     marker.color.g = 0.0;
     marker.color.b = 0.0;
     marker.color.a = 1.0;
+    
+    marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
 
 std::vector< geo::Vec2f > Circle::convexHullPoints(unsigned int nPoints)
@@ -1233,6 +1236,8 @@ void Rectangle::setTranslationalVelocityMarker( visualization_msgs::Marker& mark
     marker.color.g = 0.0;
     marker.color.b = 0.0;
     marker.color.a = 1.0;
+    
+    marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
 
 void Rectangle::setRotationalVelocityMarker( visualization_msgs::Marker& marker, unsigned int ID )
@@ -1264,7 +1269,9 @@ void Rectangle::setRotationalVelocityMarker( visualization_msgs::Marker& marker,
     marker.color.r = 0.0;
     marker.color.g = 0.0;
     marker.color.b = 1.0;
-    marker.color.a = 1.0;    
+    marker.color.a = 1.0;  
+    
+    marker.lifetime = ros::Duration ( TIMEOUT_TIME );
 }
 
 std::vector<geo::Vec2f> Rectangle::determineCorners ( float associationDistance )
@@ -1416,7 +1423,7 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
 void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::MatrixXf z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
-        unsigned int x_PosVelRef = 0, y_PosVelRef = 1, xVel_PosVelRef = 2, yVel_PosVelRef = 3;
+        unsigned int x_PosVelRef = 0, y_PosVelRef = 1, xVel_PosVelRef = 2, yVel_PosVelRef = 3, xAccel_PosVelRef = 4, yAccel_PosVelRef = 5;
         unsigned int r_dimRef = 0;      
         unsigned int x_zRef = 0, y_zRef = 1, radius_zRef = 2;
         
@@ -1425,10 +1432,24 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::Matri
                     0.0, 1.0, 0.0, dt,   // y 
                     0.0, 0.0, 1.0, 0.0,  // x vel 
                     0.0, 0.0, 0.0, 1.0;  // y vel
-                
+
+        float dt2 = std::pow(dt, 2.0);
+        
+/*        Eigen::MatrixXf F_PosVel ( 6, 6 );        
+        F_PosVel << 1.0, 0.0, dt,  0.0, 0.5*dt2, 0.0,   // x 
+                    0.0, 1.0, 0.0, dt,  0.0,     0.5*dt2,   // y 
+                    0.0, 0.0, 1.0, 0.0, dt,      0.0,       // x vel 
+                    0.0, 0.0, 0.0, 1.0, 0.0,     dt,       // y vel
+                    0.0, 0.0, 0.0, 0.0, 1.0,     0.0,       // x double
+                    0.0, 0.0, 0.0, 0.0, 0.0,     1.0;      // y double   */             
+                    
         Eigen::MatrixXf Fdim ( 1, 1 );    
         Fdim <<     1.0;               // radius
                 
+//         Eigen::MatrixXf H_PosVel ( 2, 6 );
+//         H_PosVel << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+//                     0.0, 1.0, 0.0, 0.0, 0.0, 0.0;
+                    
         Eigen::MatrixXf H_PosVel ( 2, 4 );
         H_PosVel << 1.0, 0.0, 0.0, 0.0,
                     0.0, 1.0, 0.0, 0.0;
@@ -1447,19 +1468,22 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::Matri
         // After the position update for changed dimensions, update the dimensions
         Eigen::MatrixXf P_PosVel = circle_.get_P();
         Eigen::MatrixXf x_k_1_k_1_PosVel( 4, 1 ), z_k_posVel( 2, 1 );
-        x_k_1_k_1_PosVel << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel();
+        x_k_1_k_1_PosVel << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel(), circle_.get_xAccel(), circle_.get_yAccel();
         z_k_posVel << z_k ( x_zRef ), z_k ( y_zRef );
-    
+    std::cout << "Debug test1" << std::endl;
         Eigen::MatrixXf x_k_k_PosVel = kalmanUpdate(F_PosVel, H_PosVel, &P_PosVel, x_k_1_k_1_PosVel, z_k_posVel, Q_k.block<4, 4>( 0, 0 ), R_k.block<2, 2>( 0, 0 ) );         
-        
+    std::cout << "Debug test2" << std::endl;    
         circle_.set_x ( x_k_k_PosVel ( x_PosVelRef ) );
         circle_.set_y ( x_k_k_PosVel ( y_PosVelRef ) );
         circle_.set_xVel ( x_k_k_PosVel ( xVel_PosVelRef ) );
         circle_.set_yVel ( x_k_k_PosVel ( yVel_PosVelRef ) );
+        circle_.set_xAccel ( x_k_k_PosVel ( xAccel_PosVelRef ) );
+        circle_.set_yAccel ( x_k_k_PosVel ( yAccel_PosVelRef ) );
         circle_.set_radius ( x_k_k_dim( r_dimRef ) );
-
+std::cout << "Debug test3" << std::endl;
         circle_.set_P ( P_PosVel );
         circle_.set_Pdim ( Pdim );
+        std::cout << "Debug test4" << std::endl;
 }
 
 void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt, const geo::Pose3D& sensor_pose )

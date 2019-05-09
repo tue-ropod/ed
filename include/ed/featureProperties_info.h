@@ -41,6 +41,7 @@ public:
         w.writeValue ( "roll",  p.getRectangle().get_roll() );
         w.writeValue ( "pitch", p.getRectangle().get_pitch() );
         w.writeValue ( "yaw",   p.getRectangle().get_yaw() );
+        w.writeValue ( "nMeasurements",  p.getNMeasurements() );
         w.endGroup();
     }
 
@@ -57,6 +58,8 @@ public:
         p.featureProbabilities_.pmf_.deserialize( serializedData );
        
         float x, y, z, w, d, h, roll, pitch, yaw;
+        int nMeasurements;
+        
         if ( r.readGroup ( "circ" ) ) 
         {       
                 r.readValue ( "x",     x );
@@ -88,6 +91,7 @@ public:
                 r.readValue ( "pitch", yaw );
             
                 r.readValue ( "yaw",   yaw );
+                r.readValue ( "nMeasurements",   nMeasurements );
                 r.endGroup();
                 
                 p.rectangle_.set_x(x);
@@ -98,7 +102,8 @@ public:
                 p.rectangle_.set_h(h);
                 p.rectangle_.set_roll(roll);
                 p.rectangle_.set_pitch(pitch);
-                p.rectangle_.set_yaw(yaw);         
+                p.rectangle_.set_yaw(yaw);
+                p.setNMeasurements( nMeasurements );
         }
 
         v = p;

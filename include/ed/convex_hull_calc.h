@@ -62,7 +62,7 @@ public:
 
 class Circle
 {
-    float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_, radius_; // x, y, z-positions, roll, pitch, yaw and radius of circle
+    float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_, xAccel_, yAccel_, radius_; // x, y, z-positions, roll, pitch, yaw and radius of circle
     Eigen::MatrixXf P_, Pdim_; // estimated covariance for state = [x, y, xVel, yVel] ^T and the radius
     
   public:
@@ -78,6 +78,8 @@ class Circle
     float get_yaw()                              { return yaw_; } ;
     float get_xVel()                             { return xVel_; } ;
     float get_yVel()                             { return yVel_; } ;
+    float get_xAccel()                           { return xAccel_; } ;
+    float get_yAccel( )                          { return yAccel_; } ;
     float get_radius()                           { return radius_; } ;
     Eigen::MatrixXf get_P()                      { return P_; } ;
     Eigen::MatrixXf get_Pdim()                   { return Pdim_; } ;
@@ -90,6 +92,8 @@ class Circle
     void set_yaw        ( float yaw )            { yaw_   = yaw; } ;
     void set_xVel       ( float xVel )           { xVel_  = xVel; } ;
     void set_yVel       ( float yVel )           { yVel_  = yVel; } ;
+    void set_xAccel     ( float xAccel )         { xAccel_  = xAccel; } ;
+    void set_yAccel     ( float yAccel )          { yAccel_  = yAccel; } ;
     void set_radius     ( float radius )         { radius_ = radius; } ;
     void set_P          ( Eigen::MatrixXf P )    { P_ = P; } ;
     void set_Pdim       ( Eigen::MatrixXf Pdim ) { Pdim_ = Pdim; } ;
@@ -339,9 +343,12 @@ class FeatureProperties
     Circle circle_;
 
     Rectangle rectangle_;
-
+    
+    int nMeasurements_;
+    
     FeatureProperties ( ) { // Initialize with 50/50 probabilities unless otherwise indicated
        featureProbabilities_.setProbabilities ( 0.5, 0.5 );
+      nMeasurements_ = 0;
    };
 
     FeatureProperties ( const FeatureProperties* other ) {  
@@ -349,6 +356,7 @@ class FeatureProperties
        featureProbabilities_ = other->featureProbabilities_;
        circle_ = other->circle_;
        rectangle_ = other->rectangle_;
+       nMeasurements_ = other->nMeasurements_;
     };
 
     FeatureProbabilities getFeatureProbabilities() const {
@@ -382,7 +390,15 @@ class FeatureProperties
     void setRectangle ( Rectangle rectangle_in ) {
         rectangle_ = rectangle_in;
     };
-
+    
+    int getNMeasurements() const{
+            return nMeasurements_;
+    };
+    
+    void setNMeasurements( int nMeasurements ){
+            nMeasurements_ = nMeasurements;
+    };
+    
     void updateCircleSize(float Q_k, float R_k, float z_k); // z = observation // TODO improve! -> Determine proper covariances
 
     void updateRectangleSize(Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k); // TODO improve! h-> Determine proper covariances
@@ -398,7 +414,6 @@ class FeatureProperties
     void correctPosForDimDiff(float deltaWidth, float deltaDepth, float *deltaX, float *deltaY, float dt);
     
     void printProperties();
-
 };
 
 
