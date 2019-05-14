@@ -1470,9 +1470,9 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::Matri
         Eigen::MatrixXf x_k_1_k_1_PosVel( 4, 1 ), z_k_posVel( 2, 1 );
         x_k_1_k_1_PosVel << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel(), circle_.get_xAccel(), circle_.get_yAccel();
         z_k_posVel << z_k ( x_zRef ), z_k ( y_zRef );
-    std::cout << "Debug test1" << std::endl;
+//    std::cout << "Debug test1" << std::endl;
         Eigen::MatrixXf x_k_k_PosVel = kalmanUpdate(F_PosVel, H_PosVel, &P_PosVel, x_k_1_k_1_PosVel, z_k_posVel, Q_k.block<4, 4>( 0, 0 ), R_k.block<2, 2>( 0, 0 ) );         
-    std::cout << "Debug test2" << std::endl;    
+  //  std::cout << "Debug test2" << std::endl;    
         circle_.set_x ( x_k_k_PosVel ( x_PosVelRef ) );
         circle_.set_y ( x_k_k_PosVel ( y_PosVelRef ) );
         circle_.set_xVel ( x_k_k_PosVel ( xVel_PosVelRef ) );
@@ -1480,10 +1480,10 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::Matri
         circle_.set_xAccel ( x_k_k_PosVel ( xAccel_PosVelRef ) );
         circle_.set_yAccel ( x_k_k_PosVel ( yAccel_PosVelRef ) );
         circle_.set_radius ( x_k_k_dim( r_dimRef ) );
-std::cout << "Debug test3" << std::endl;
+//std::cout << "Debug test3" << std::endl;
         circle_.set_P ( P_PosVel );
         circle_.set_Pdim ( Pdim );
-        std::cout << "Debug test4" << std::endl;
+  //      std::cout << "Debug test4" << std::endl;
 }
 
 void FeatureProperties::updateRectangleFeatures ( Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::VectorXf z_k, float dt, const geo::Pose3D& sensor_pose )
