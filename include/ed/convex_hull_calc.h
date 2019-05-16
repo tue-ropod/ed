@@ -62,7 +62,7 @@ public:
 
 class Circle
 {
-    float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_, xAccel_, yAccel_, radius_; // x, y, z-positions, roll, pitch, yaw and radius of circle
+    float x_, y_, z_, roll_, pitch_, yaw_, xVel_, yVel_, radius_; //xAccel_;//, yAccel_, radius_; // x, y, z-positions, roll, pitch, yaw and radius of circle
     Eigen::MatrixXf P_, Pdim_; // estimated covariance for state = [x, y, xVel, yVel] ^T and the radius
     
   public:
@@ -78,8 +78,8 @@ class Circle
     float get_yaw()                              { return yaw_; } ;
     float get_xVel()                             { return xVel_; } ;
     float get_yVel()                             { return yVel_; } ;
-    float get_xAccel()                           { return xAccel_; } ;
-    float get_yAccel( )                          { return yAccel_; } ;
+  // float get_xAccel()                           { return xAccel_; } ;
+  //  float get_yAccel( )                          { return yAccel_; } ;
     float get_radius()                           { return radius_; } ;
     Eigen::MatrixXf get_P()                      { return P_; } ;
     Eigen::MatrixXf get_Pdim()                   { return Pdim_; } ;
@@ -92,8 +92,8 @@ class Circle
     void set_yaw        ( float yaw )            { yaw_   = yaw; } ;
     void set_xVel       ( float xVel )           { xVel_  = xVel; } ;
     void set_yVel       ( float yVel )           { yVel_  = yVel; } ;
-    void set_xAccel     ( float xAccel )         { xAccel_  = xAccel; } ;
-    void set_yAccel     ( float yAccel )          { yAccel_  = yAccel; } ;
+//    void set_xAccel     ( float xAccel )         { xAccel_  = xAccel; } ;
+//    void set_yAccel     ( float yAccel )          { yAccel_  = yAccel; } ;
     void set_radius     ( float radius )         { radius_ = radius; } ;
     void set_P          ( Eigen::MatrixXf P )    { P_ = P; } ;
     void set_Pdim       ( Eigen::MatrixXf Pdim ) { Pdim_ = Pdim; } ;

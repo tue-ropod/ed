@@ -400,7 +400,7 @@ Circle::Circle()
 {
     float notANumber = 0.0/0.0;
 //     P_.setIdentity( 7, 7 );
-    P_.setIdentity( 5, 5 );
+    P_.setIdentity( 4, 4 );
     Pdim_.setIdentity( 1, 1 ); 
     this->setProperties( notANumber, notANumber, notANumber, notANumber, notANumber, notANumber, notANumber  ); // Produces NaN values, meaning that the properties are not initialized yet
     xVel_   = 0.0;
@@ -1423,7 +1423,7 @@ void FeatureProbabilities::update ( FeatureProbabilities& featureProbabilities_i
 void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::MatrixXf R_k, Eigen::MatrixXf z_k, float dt )
 // z = observation, dt is the time difference between the latest update and the new measurement
 {
-        unsigned int x_PosVelRef = 0, y_PosVelRef = 1, xVel_PosVelRef = 2, yVel_PosVelRef = 3, xAccel_PosVelRef = 4, yAccel_PosVelRef = 5;
+        unsigned int x_PosVelRef = 0, y_PosVelRef = 1, xVel_PosVelRef = 2, yVel_PosVelRef = 3;//, xAccel_PosVelRef = 4, yAccel_PosVelRef = 5;
         unsigned int r_dimRef = 0;      
         unsigned int x_zRef = 0, y_zRef = 1, radius_zRef = 2;
         
@@ -1468,7 +1468,7 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::Matri
         // After the position update for changed dimensions, update the dimensions
         Eigen::MatrixXf P_PosVel = circle_.get_P();
         Eigen::MatrixXf x_k_1_k_1_PosVel( 4, 1 ), z_k_posVel( 2, 1 );
-        x_k_1_k_1_PosVel << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel(), circle_.get_xAccel(), circle_.get_yAccel();
+        x_k_1_k_1_PosVel << circle_.get_x(), circle_.get_y(), circle_.get_xVel(), circle_.get_yVel();//, circle_.get_xAccel(), circle_.get_yAccel();
         z_k_posVel << z_k ( x_zRef ), z_k ( y_zRef );
 //    std::cout << "Debug test1" << std::endl;
         Eigen::MatrixXf x_k_k_PosVel = kalmanUpdate(F_PosVel, H_PosVel, &P_PosVel, x_k_1_k_1_PosVel, z_k_posVel, Q_k.block<4, 4>( 0, 0 ), R_k.block<2, 2>( 0, 0 ) );         
@@ -1477,8 +1477,8 @@ void FeatureProperties::updateCircleFeatures ( Eigen::MatrixXf Q_k, Eigen::Matri
         circle_.set_y ( x_k_k_PosVel ( y_PosVelRef ) );
         circle_.set_xVel ( x_k_k_PosVel ( xVel_PosVelRef ) );
         circle_.set_yVel ( x_k_k_PosVel ( yVel_PosVelRef ) );
-        circle_.set_xAccel ( x_k_k_PosVel ( xAccel_PosVelRef ) );
-        circle_.set_yAccel ( x_k_k_PosVel ( yAccel_PosVelRef ) );
+    //    circle_.set_xAccel ( x_k_k_PosVel ( xAccel_PosVelRef ) );
+    //    circle_.set_yAccel ( x_k_k_PosVel ( yAccel_PosVelRef ) );
         circle_.set_radius ( x_k_k_dim( r_dimRef ) );
 //std::cout << "Debug test3" << std::endl;
         circle_.set_P ( P_PosVel );
