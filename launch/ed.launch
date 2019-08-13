@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Launch ED -->
+    <node pkg="ed" type="ed" name="ed" args="$(find ropod_navigation_test)/config/brsu-config-ED_robosense.yaml" output="screen"> <!--launch-prefix="gdb -ex run -_-args"-->  <!--launch-prefix="gdb -ex run -_-args"-->
+</launch>
