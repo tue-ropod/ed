@@ -84,6 +84,7 @@ void PluginContainer::configure(InitData& init, bool reconfigure)
 
     // Set plugin loop frequency
     setLoopFrequency(freq);
+    plugin_->loop_frequency_ = freq;
 
     if (init.config.readGroup("parameters"))
     {

@@ -41,10 +41,14 @@ public:
     virtual void process(const PluginInput& data, UpdateRequest& req) {}
 
     const std::string& name() const { return name_; }
+    
+    double getLoopFrequency(){ return loop_frequency_; };
 
 private:
 
     std::string name_;
+    
+    double loop_frequency_;
 
 };
 
