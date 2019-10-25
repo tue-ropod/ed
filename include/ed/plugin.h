@@ -7,6 +7,8 @@
 #include <tue/config/configuration.h>
 
 #include "ed/init_data.h"
+#include "ed/arbitraryDataBuffer.h"
+#include <boost/shared_ptr.hpp>
 
 namespace ed {
 
@@ -43,6 +45,11 @@ public:
     const std::string& name() const { return name_; }
     
     double getLoopFrequency(){ return loop_frequency_; };
+    
+    //std::vector<ArbitrayDataBuffer>* getArbitraryDataBuffer(){ return &arbitraryData_;};
+   // std::vector<ArbitrayDataBuffer> getArbitraryDataBuffer(){ return arbitraryData_;};
+    
+        std::vector< boost::shared_ptr<ArbitrayDataBuffer> > arbitraryData_;
 
 private:
 

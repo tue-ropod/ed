@@ -85,7 +85,10 @@ void PluginContainer::configure(InitData& init, bool reconfigure)
     // Set plugin loop frequency
     setLoopFrequency(freq);
     plugin_->loop_frequency_ = freq;
+    plugin_->arbitraryData_ = this->arbitraryData_;
 
+    // TODO set pointer to vector with the global data here
+    
     if (init.config.readGroup("parameters"))
     {
         tue::Configuration scoped_config = init.config.limitScope();

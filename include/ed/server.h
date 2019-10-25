@@ -18,6 +18,9 @@
 
 #include <queue>
 
+#include "ed/arbitraryDataBuffer.h"
+#include <memory>
+
 namespace ed
 {
 
@@ -90,6 +93,8 @@ private:
     ros::Publisher pub_stats_;
 
     std::string getFullLibraryPath(const std::string& lib);
+    
+    std::vector<std::shared_ptr<ArbitrayDataBuffer>> arbitraryData_;
 };
 
 }

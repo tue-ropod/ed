@@ -3,6 +3,12 @@ project(ed)
 
 #set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag(-std=c++11 HAS_STD_CPP11_FLAG)
+if(HAS_STD_CPP11_FLAG)
+  add_compile_options(-std=c++11)
+endif()
+
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
   class_loader
@@ -21,10 +27,12 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   tue_config
   problib
+  #wire_msgs # TODO? possible to add conditional dependency? We do not need the wire_msgs for all ED-packages
 )
 
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Boost REQUIRED COMPONENTS thread)
 
 # Generate messages in the 'msg' folder
 add_message_files(
@@ -63,7 +71,7 @@ generate_messages(
 ## catkin specific configuration ##
 ###################################
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS include ${Boost_INCLUDE_DIRS}
   LIBRARIES ed_core ed_io
   CATKIN_DEPENDS tue_config tue_serialization rgbd ed_object_models problib
   # DEPENDS system_lib
@@ -80,6 +88,7 @@ include_directories(
   3rdparty
   ${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 
 # ------------------------------------------------------------------------------------------------
@@ -147,7 +156,7 @@ add_executable(ed
   src/server.cpp
   src/plugin_container.cpp
 )
-target_link_libraries(ed ed_core ed_io)
+target_link_libraries(ed ed_core ed_io ${Boost_LIBRARIES})
 add_dependencies(ed ${PROJECT_NAME}_gencpp)
 
 # ------------------------------------------------------------------------------------------------

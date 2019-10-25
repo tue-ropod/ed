@@ -11,6 +11,9 @@
 
 #include <queue>
 
+#include "ed/arbitraryDataBuffer.h"
+#include <boost/shared_ptr.hpp>
+
 namespace class_loader { class ClassLoader; }
 
 namespace ed
@@ -89,6 +92,8 @@ protected:
     double cycle_duration_;
 
     double loop_frequency_;
+    
+    std::vector< boost::shared_ptr<ArbitrayDataBuffer> > arbitraryData_;
 
     mutable boost::mutex mutex_update_request_;
 
