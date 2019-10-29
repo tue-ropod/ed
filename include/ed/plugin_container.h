@@ -26,7 +26,8 @@ class PluginContainer
 
 public:
 
-    PluginContainer();
+    //PluginContainer( boost::shared_ptr< std::vector< boost::shared_ptr<ArbitrayDataBuffer> > > arbitraryDatabuffersIn_);
+    PluginContainer( );
 
     virtual ~PluginContainer();
 
@@ -75,6 +76,8 @@ public:
     }
 
     bool isRunning() const { return is_running_; }
+    
+    void setArbitraryDatabuffers( boost::shared_ptr< std::vector< boost::shared_ptr<ArbitrayDataBuffer> > > arbitraryDatabuffersIn) { arbitraryDatabuffers_ = arbitraryDatabuffersIn;}
 
 protected:
 
@@ -92,8 +95,6 @@ protected:
     double cycle_duration_;
 
     double loop_frequency_;
-    
-    std::vector< boost::shared_ptr<ArbitrayDataBuffer> > arbitraryData_;
 
     mutable boost::mutex mutex_update_request_;
 
@@ -120,8 +121,9 @@ protected:
     bool step();
 
     void run();
-
-
+    
+    boost::shared_ptr< std::vector< boost::shared_ptr<ArbitrayDataBuffer> > > arbitraryDatabuffers_;
+    
     // buffer of delta's since last process call
     std::vector<UpdateRequestConstPtr> world_deltas_;
 

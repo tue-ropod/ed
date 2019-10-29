@@ -5,24 +5,17 @@
 #include <string>
 #include <ed/bounded_buffer.h>
 
-// https://stackoverflow.com/questions/6026234/c-templated-return-value-with-pure-virtual-function
 class ArbitrayDataBuffer
 {     
         
 public:
-  ArbitrayDataBuffer(){};
-  
-  // virutal function to obtain data? What type for the return?
-  
- //  virtual void f() {}; // make BaseClass polymorphic
+  ArbitrayDataBuffer( int bufferSizeIn = 100 ): bufferSize(bufferSizeIn){ };
    
   std::string name;
   
-  virtual std::string getType(){ return "ArbitrayDataBuffer"; };
+  std::string classType;
   
-  virtual void getData(){};
-  
-  virtual void bufferData(){};
+  int bufferSize; // TODO? make configurable
 };
 
 #endif

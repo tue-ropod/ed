@@ -21,18 +21,29 @@ public:
 
    explicit bounded_buffer(size_type capacity) : m_unread(0), m_container(capacity) {}
 
-  void push_front(param_type item) {
+  void push_front(param_type item) 
+  {
       // param_type represents the "best" way to pass a parameter of type value_type to a method
+      boost::mutex::scoped_lock lock(m_mutex); // this already locks the mutex
+      
+      if(!this->is_not_full()) // if buffer full, remove oldest item
+      {
+              //value_type* pItem;
+              //*pItem = 
+              m_container[--m_unread]; 
+              m_not_full.notify_one();
+      }
 
-      boost::mutex::scoped_lock lock(m_mutex);
-      m_not_full.wait(lock, boost::bind(&bounded_buffer<value_type>::is_not_full, this));
+  //    m_not_full.wait(lock, boost::bind(&bounded_buffer<value_type>::is_not_full, this)); // OLD
+      
       m_container.push_front(item);
       ++m_unread;
       lock.unlock();
       m_not_empty.notify_one();
    }
 
-   void pop_back(value_type* pItem) {
+   void pop_back(value_type* pItem) 
+   {
       boost::mutex::scoped_lock lock(m_mutex);
       m_not_empty.wait(lock, boost::bind(&bounded_buffer<value_type>::is_not_empty, this));
       *pItem = m_container[--m_unread];
@@ -41,15 +52,16 @@ public:
    }
    
    bool is_not_empty() const { return m_unread > 0; }
-   bool is_not_full() const { return m_unread < m_container.capacity(); }
+   bool is_not_full() const {  return m_unread < m_container.capacity(); }
    
    int capacity() const {return m_container.capacity();}
+   int numberUnread() const {return m_unread;}
 
 private:
    bounded_buffer(const bounded_buffer&);              // Disabled copy constructor
    bounded_buffer& operator = (const bounded_buffer&); // Disabled assign operator
 
-   size_type m_unread;
+   size_type m_unread; // TODO currently, pop_back and m_unread allow for a single consumer only
    container_type m_container;
    boost::mutex m_mutex;
    boost::condition m_not_empty;

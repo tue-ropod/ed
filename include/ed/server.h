@@ -94,7 +94,7 @@ private:
 
     std::string getFullLibraryPath(const std::string& lib);
     
-    std::vector<std::shared_ptr<ArbitrayDataBuffer>> arbitraryData_;
+    boost::shared_ptr< std::vector< boost::shared_ptr<ArbitrayDataBuffer> > > arbitraryDatabuffers_;
 };
 
 }

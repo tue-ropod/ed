@@ -11,12 +11,17 @@ namespace ed
 {
 
 // --------------------------------------------------------------------------------
-
+// boost::shared_ptr< std::vector< boost::shared_ptr<ArbitrayDataBuffer> > > arbitraryDatabuffersIn_
+        //arbitraryDatabuffers_(arbitraryDatabuffersIn_)
 PluginContainer::PluginContainer()
     : class_loader_(0), request_stop_(false), is_running_(false), cycle_duration_(0.1), loop_frequency_(10), step_finished_(true), t_last_update_(0),
       total_process_time_sec_(0)
 {
     timer_.start();
+    
+  //  arbitraryDatabuffers_ = boost::make_shared<std::vector<boost::shared_ptr<ArbitrayDataBuffer> > >();
+   
+   // std::cout << "PluginContainer Constructor: arbitraryDatabuffers_ = " << arbitraryDatabuffers_ << std::endl;
 }
 
 // --------------------------------------------------------------------------------
@@ -27,7 +32,7 @@ PluginContainer::~PluginContainer()
 
 //    if (thread_)
 //        thread_->join();
-
+  
     plugin_.reset();
     delete class_loader_;
 }
@@ -85,7 +90,9 @@ void PluginContainer::configure(InitData& init, bool reconfigure)
     // Set plugin loop frequency
     setLoopFrequency(freq);
     plugin_->loop_frequency_ = freq;
-    plugin_->arbitraryData_ = this->arbitraryData_;
+    plugin_->arbitraryDatabuffers_ = this->arbitraryDatabuffers_;
+    
+    std::cout << "PluginContainer: for plugin " << plugin_->name() << " plugin_->arbitraryDatabuffers_ = " << plugin_->arbitraryDatabuffers_<< std::endl;
 
     // TODO set pointer to vector with the global data here
     

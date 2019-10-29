@@ -35,6 +35,7 @@ namespace ed
 
 Server::Server() : world_model_(new WorldModel(&property_key_db_))
 {
+        arbitraryDatabuffers_ = boost::make_shared<std::vector<boost::shared_ptr<ArbitrayDataBuffer> > >();
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -72,12 +73,14 @@ void Server::configure(tue::Configuration& config, bool reconfigure)
             std::string name;
             if (!config.value("name", name))
                 return;
+            
+            std::cout << "Going to configure " << name << "-plugin." << std::endl;
 
             int enabled = 1;
             config.value("enabled", enabled, tue::OPTIONAL);
 
             PluginContainerPtr plugin_container;
-
+            
             std::map<std::string, PluginContainerPtr>::iterator it_plugin = plugin_containers_.find(name);
             if (it_plugin == plugin_containers_.end())
             {
@@ -89,6 +92,7 @@ void Server::configure(tue::Configuration& config, bool reconfigure)
                 }
 
                 plugin_container = loadPlugin(name, config);
+                //plugin_container->setArbitraryDatabuffers(this->arbitraryDatabuffers_);
             }
             else
             {
@@ -116,6 +120,7 @@ void Server::configure(tue::Configuration& config, bool reconfigure)
             if (enabled && plugin_container && !plugin_container->isRunning())
                 plugin_container->runThreaded();
 
+            std::cout << "Pluging " << name << " configured. \n" << std::endl;
         } // end iterate plugins
 
         config.endArray();
@@ -257,7 +262,8 @@ PluginContainerPtr Server::loadPlugin(const std::string& plugin_name, tue::Confi
     }
 
     // Create a plugin container
-    PluginContainerPtr container(new PluginContainer());
+    PluginContainerPtr container(new PluginContainer);
+    container->setArbitraryDatabuffers(this->arbitraryDatabuffers_);
 
     InitData init(property_key_db_, config);
 
