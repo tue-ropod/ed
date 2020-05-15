@@ -13,6 +13,8 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
+#include<pcl/search/impl/search.hpp>
+
 #include <tue/config/reader.h>
 
 #include <ros/init.h>

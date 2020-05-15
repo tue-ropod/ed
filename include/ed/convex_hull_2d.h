@@ -1,6 +1,8 @@
 #ifndef ED_CONVEX_HULL_2D_H_
 #define ED_CONVEX_HULL_2D_H_
 
+#include<pcl/search/impl/search.hpp>
+
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
